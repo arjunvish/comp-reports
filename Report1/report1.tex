@@ -1,0 +1,779 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
+\usepackage{minted}
+
+\usepackage{hyperref}
+\hypersetup{
+ pdfborder={0 0 0},
+ colorlinks=true,
+ linkcolor=blue,
+ urlcolor=blue,
+ citecolor=blue
+}
+\usepackage{cleveref}
+
+
+\newcommand{\rem}[1]{\textcolor{red}{[#1]}}
+\newcommand{\ed}[1]{\textcolor{blue}{#1}}
+\newcommand{\ct}[1]{\rem{#1 --ct}}
+
+\begin{document}
+\title{Comprehensive Exam Report 1 - Foundations of Theorem Provers}
+\author{Arjun Viswanathan}
+\date{}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+	In this report, we will compare two historic 
+	interactive theorem provers - LCF (Logic for 
+	Computable Functions) and Automath. Both proof 
+	assistants are driven by a small kernel, and 
+	reduce proof checking to type checking but 
+	their type systems vary significantly. 
+	Automath is driven by the Curry-Howard 
+	Isomorphism whereas type checking in LCF 
+	is reduced to type checking in its 
+	implementation language of abstract data 
+	type instances. We take a look at the 
+	fundamentals of these theorem provers and how 
+	these have manifested in modern proof 
+	assistants that have been inspired by these 
+	two systems.
+
+\section{De Bruijn's Automath}
+\label{sec:automath}
+	N. G. de Bruijn introduced the Automath 
+	language in the 
+	1968~\cite{deBruijn1983, 10.1007/BFb0060623} 
+	as a means to formalize mathematics in 
+	computers so that it can be mechanically
+	checked. This resulted in the Automath 
+	project that, among other things, resulted
+	in the development of a proof-checker 
+	for the Automath language~\cite{5df50ef4ddff4ff091125a511f563319, 
+	c398556a074e49a193d5035ae32aaa79}.
+
+	Inspired by colleague A. Heyting, De Bruijn 
+	realized that in a typed language, logical 
+	propositions can also be considered types 
+	of their corresponding proofs, which would 
+	constitute terms of the respective types.
+	This crucial insight allowed logic to be 
+	done in a typed language. This 
+	correspondence between propositions 
+	and types, and proofs and terms was 
+	discovered independently by H. B. Curry 
+	and W. Howard and is thus termed as 
+	the Curry-Howard(-de Bruijn) isomorphism.
+	
+	\subsection{The Curry-Howard Isomorphism}
+	\label{sec:curry}
+	The Curry-Howard Isomorphism encapsulates 
+	the correspondence between proofs and 
+	terms/programs and between propositions
+	and types. In doing so, it equates the 
+	notion of proving, which is generally 
+	considered hard, to computing.
+	Initially, Haskell Curry noticed the 
+	correspondence between minimal 
+	implication logic and a simple 
+	$\lambda-$ calculus, which was extended
+	by William 
+	Howard~\cite{Howard1995-HOWTFN}.
+	
+	Minimal implication logic is a subset
+	of propositional logic with only 
+	implication and its introduction 
+	and elimination rules. It can be 
+	characterized by the following 
+	natural deduction rules:\\ \\
+	\begin{math}
+		\infer[(\texttt{ax})]{\Delta \vdash A}{}
+		\ \ \ \ 
+		\infer[(\to\texttt{-in})]{\Delta \vdash A \to B}
+		{\Delta \cup \{A\} \vdash B}
+		\ \ \ \ 
+		\infer[(\to\texttt{-el})]{\Delta \vdash B}
+		{\Delta \vdash A \to B & \Delta \vdash A}
+	\end{math} 
+	\\ \\
+	Untyped $\lambda-$calculus gives a basic 
+	mechanism for dealing with functions, making 
+	it the foundation of functional programming.
+	The syntax of terms in untyped $\lambda-$
+	calculus is as follows:
+	\begin{align*}
+		\Lambda := \nu\ |\ (\lambda \nu.\Lambda)
+		\ |\ (\Lambda\ \Lambda)
+	\end{align*}  
+	where $\nu$ represents a variable, $\lambda$ 
+	is used to denote function abstraction, 
+	and two juxtaposed terms represent the 
+	application of the first one to the second.
+	Given a context $\Gamma$ that gives types 
+	to variables, the rules for deriving 
+	types of $\lambda$-terms are as follows: \\ \\
+	\begin{math}
+		\infer[(\texttt{var})]{\Gamma \vdash x : A}
+		{x : A \in \Gamma}
+		\ \ \ \ 
+		\infer[(\texttt{abs})]
+		{\Gamma \vdash \lambda x. M : A \to B}
+		{\Gamma, x : A \vdash M : B}
+		\ \ \ \ 
+		\infer[(\texttt{app})]{\Gamma \vdash M\ N : B}
+		{\Gamma \vdash M : A \to B & \Gamma \vdash N : A}
+	\end{math} 
+	\\ \\
+	Curry noticed an isomorphism between these 
+	2 systems of rules. Howard extended this to 
+	predicate logic and Heyting arithmetic. The 
+	Curry-Howard isomorphism for the systems 
+	of natural deduction for minimal implication 
+	logic and the typing rules of untyped lambda 
+	calculus terms can be stated as follows:\\
+
+	\noindent If $\Sigma$ is a derivation in natural 
+	deduction with conclusion $\Delta \vdash A$,
+	then $\bar{\Delta} \vdash \bar{\Sigma} : A$,\\
+	
+	\noindent where $\bar{\Sigma}$ is a 
+	$\lambda-$term,	and $\bar{\Delta}$ is a 
+	context such that for each $B \in \Delta$, 
+	there exists some $x$ such that 
+	$x : B \in \bar{\Delta}$. There 
+	is also a mapping from typable $\lambda-$ terms
+	to derivations that completes the isomorphism.
+	
+	\subsection{Automath to Coq}
+	\label{sec:coq}
+	The Curry-Howard Isomorphism is prevalent in 
+	Automath and subsequent theorem provers that 
+	were motivated by Automath. One of the most 
+	popular of this lineage of Automath-style 
+	theorem provers is Coq. In Coq, a theorem is a 
+	formula which is proven using functions 
+	called tactics. To prove a conjecture in Coq, 
+	it suffices to (and is necessary to) provide 
+	to Coq, a term whose type is the proposition 
+	being proved. In most cases, this is done 
+	using tactics that continuously modify the 
+	proof term, so it has no holes. Initially, 
+	the entire term is a hole that has the goal's 
+	type, and tactics break this down into smaller 
+	and smaller holes, until all of them are 
+	filled.
+	
+	In addition to Automath, de Bruijn's 
+	contribution to the interactive theorem 
+	proving world includes an answer to the 
+	question `Why is a mechanical proof, 
+	more dependable than a written one?'.
+	A proof assistant satisfies the 
+	``de Bruijn criterion''~\cite
+	{10.5555/778522.778527} if it generates 
+	proof terms that can be checked 
+	independently from the system by a simple 
+	program that a skeptical user could write 
+	him/herself.
+	
+	By reducing the proof checker of Coq to 
+	a type checker for propositions, the 
+	Curry-Howard isomorphism helps Coq
+	fulfill the de Bruijn criterion. Type 
+	checkers are small and 
+	straightforward programs that are - 
+	in principal - easier to check 
+	externally. 
+	While this was likely 
+	more true for a simpler system like 
+	Automath than it is for a modern 
+	one like Coq (which has a much 
+	more complicated type system), it 
+	remains true that type-checkers are 
+	relatively simple in the space of 
+	all programs, which contributes to 
+	the widespread acceptance of 
+	properties proved in Coq.
+	
+	Over the years, Coq has been enhanced 
+	with complicated tactics and even 
+	tactic languages. The soundness of 
+	these tactics doesn't affect the 
+	soundness of the Coq proof system, 
+	because it is only concerned with 
+	the well-typedness of the proof 
+	term corresponding to a proposition,
+	not with how the term was constructed. 
+	A buggy tactic, by definition, would 
+	construct an ill-typed proof term,
+	which wouldn't pass through the 
+	Coq type-checker.
+	
+	To demonstrate how Coq utilizes 
+	the Curry-Howard Isomorphism, 
+	consider the following example, 
+	motivated by Chapter 9 of the 
+	Logical Foundations 
+	book~\cite{Pierce:SF1}.
+	
+	Logical conjunction in Coq is 
+	defined as a proposition that 
+	can be constructed only using 
+	the two conjuncts. It is defined
+	as an inductive type with 
+	only one constructor:
+	\begin{minted}{coq}
+Inductive and (P Q : Prop) : Prop :=
+	| conj : P -> Q -> and P Q.
+	\end{minted}
+	
+	Noting that $\land$ is the infix 
+	notation for conjunction, 
+	a proof of \texttt{P $\land$ Q -> Q} 
+	would involve using tactics that
+	extract the evidence of \texttt{Q}
+	from that of \texttt{P $\land$ Q}.
+	Specifically:
+	\begin{minted}{coq}
+Theorem ex : forall P Q, P /\ Q -> Q.
+Proof.
+  intros P Q HPQ. 
+  destruct HPQ as [HP HQ].
+  apply HQ.
+Qed.
+	\end{minted}
+	The proof script between 
+	\texttt{Proof.} and \texttt{Qed.}
+	consists of tactics that complete 
+	the proof. The \texttt{intros}
+	tactic localizes the variables 
+	\texttt{P} and \texttt{Q} and 
+	evidence \texttt{HPQ} for 
+	\texttt{P $\land$ Q}. The 
+	propositions-as-types correspondence
+	is on display here with \texttt{ex}
+	having type 
+	\texttt{forall P Q, P $\land$ Q -> Q}
+	and \texttt{HPQ} having type
+	\texttt{P $\land$ Q}. The 
+	\texttt{destruct} tactic separates 
+	the proof of the conjunction into 
+	proofs of its conjuncts, and the 
+	\texttt{apply} tactic plugs the 
+	right conjunct into the hole 
+	representing the goal. Finally,
+	the \texttt{Qed} command calls 
+	Coq's type-checker to verify that 
+	the term constructed by the 
+	tactics has the type of the 
+	lemma trying to be proved.
+	
+	To see the proof term that has 
+	\texttt{forall P Q, P $\land$ Q -> Q}
+	as its type, consider the following
+	equivalent definition of \texttt{ex}.
+	
+\begin{minted}{coq}
+Definition ex : forall P Q, P /\ Q -> P :=
+  fun P Q HPQ => 
+    match HPQ with
+	  | conj P Q => Q
+    end.
+\end{minted}
+	This definition defines a function that 
+	behaves exactly like the tactics do - 
+	given the evidence for \texttt{P $\land$ Q},
+	it destructs this evidence by pattern
+	matching on all things a conjunction can 
+	be. From our definition above, we only 
+	know that it can be a combination of 
+	the proofs of its conjuncts. From the 
+	only case of the match, it returns the 
+	right proof term. This function 
+	definition defines the exact proof term 
+	that is constructed using the tactics 
+	above, thus demonstrating the 
+	proofs-as-terms correspondence.
+
+\section{Milner's LCF}
+\label{sec:lcf}
+	Dana Scott developed a logic for 
+	reasoning about computable functions at 
+	Stanford, and Robin Milner who visited 
+	Stanford and worked with Scott, 
+	later built the Edinburgh LCF
+	(Logic for Computable Functions) 
+	system~\cite{Gordon1978EdinburghLA}.
+	The LCF system provided a functional 
+	programming language ML, designed to 
+	implement the LCF logic and write proofs 
+	in it. ML abbreviates meta language, 
+	to distinguish itself from the object 
+	language its encoding, that is, the 
+	proof calculus. The features of ML 
+	include a polymorphic type system, 
+	functions as first-class objects 
+	that can be passed around like terms, 
+	and abstract datatypes - data 
+	structures that restrict the internal 
+	data to access via a fixed set of 
+	functions. 
+	
+	For Edinburgh LCF,
+	Milner had the idea of recording proof
+	results, and not entire proofs, once a 
+	proof had been checked. This avoided a 
+	lot of redundancy and saved space.
+	He implemented this using 
+	an ML abstract datatype \texttt{theorem} 
+	for defining theorems in LCF. The 
+	predefined values of this ADT were 
+	instances of axioms and its operations 
+	were inference rules. Since this 
+	\texttt{theorem} type was the only
+	way to create new theorems in the LCF 
+	system, type-checking would ensure that 
+	the only way to create theorems 
+	was via their axioms and inference 
+	rules. Since the type-checker guaranteed
+	that only valid theorems could be 
+	created, once an instance of a theorem 
+	had been created by the type-checker, 
+	LCF didn't have to remember how it 
+	was created, just that it was created 
+	soundly. 
+	
+	Milner also introduced the concepts of 
+	backward proofs, tactics and tacticals.
+	While it was common for proofs to be 
+	constructed forward - from the axioms 
+	to the goal to be proved, a backward 
+	approach breaks down the goals into 
+	simpler (sub-)goals and eventually 
+	to something resembling the axioms. A
+	tactic is a function that helps in 
+	this reduction, and tacticals can 
+	combine tactics to perform tasks 
+	such as repetitions and branching. 
+	Tactics and tacticals add some 
+	automation to proof procedures, but 
+	they lie outside the trusted proof 
+	kernel. A tactic is a function 
+	operating on values of type 
+	\texttt{theorem} and a tactical 
+	is a combination of such functions. 
+	The functions will only have the 
+	intended effect on the value, if 
+	they are sound transformations, 
+	as deemed by the type-checker.
+	
+	For example, consider the 
+	\textit{Modus Ponens} rule, also 
+	represented as the 
+	implication	elimination rule in 
+	the previous section:
+	\begin{align*}
+		\infer[MP]{\Gamma \vdash q}
+		{\Gamma \vdash p \to q & \Gamma \vdash p}
+	\end{align*}
+	This is a rule with two premises and a 
+	conclusion. In the LCF system, this is an
+	ML function with type
+	\texttt{theorem} $\to$ \texttt{theorem}
+	$\to$ \texttt{theorem}. It takes 
+	two objects of type \texttt{theorem}
+	and returns a \texttt{theorem} object.
+	
+	\subsection{The HOL Family}
+	LCF moved to Cambridge from Edinburgh
+	through Milner's collaborators. The 
+	HOL (Higher-Order Logic) theorem 
+	prover was created for hardware 
+	verification, but its support for 
+	higher-order logic made it and 
+	its descendants relevant for 
+	various applications. The first 
+	stable version of HOL - HOL88 - was
+	written in Common Lisp. HOL90 was 
+	then implemented in Standard ML. 
+	HOL Light was another variant 
+	implemented in Caml Light that 
+	prioritizes constructive logic 
+	over classical logic. 
+	
+	As new logics
+	were designed, so were proof 
+	assistants that could reason about 
+	them. Isabelle was born as an 
+	LCF-style proof assistant for 
+	Martin-L\"{o}f's constructive type 
+	theory and grew into a general 
+	framework to deal with multiple 
+	logics. Lawrence C. Paulson 
+	developed it as an LCF-like
+	system that provided a meta-logic, 
+	within which other logical frameworks 
+	could be declared - in the previous 
+	HOL systems, the logic had to be 
+	implemented in ML. Higher-order
+	unification along with backtracking
+	is central to proof search in Isabelle. 
+	While higher-order unification 
+	is able to unify more expressive 
+	terms such as variables 
+	representing functions, it adds 
+	undecidability and non-determinism 
+	to the solution space. For example, 
+	$f\ 3$ and $3+3$ can be unified 
+	by substituting 4 possible function 
+	definitions for $f$: 
+	$\lambda x.x+3$, $\lambda x.3+x$, 
+	$\lambda x.x+x$, $\lambda x.3+3$.
+	These issues are usually avoided 
+	because in practice, Isabelle 
+	has to deal with first-order 
+	unification more often. Additionally, 
+	a subset of higher-order terms, 
+	called higher-order patterns were 
+	found to behave like first-order 
+	terms for the purposes of unification.
+	When there are a non-deterministic 
+	set of unifiers, backtracking allows
+	different solutions to be explored.
+	
+	In Isabelle, the \texttt{theorem}
+	type can essentially be extended to 
+	reason about a particular object logic. 
+	Instances of Isabelle include 
+	Isabelle/CTT (constructive type theory),
+	Isabelle/IFOL (intuitionistic first-order 
+	logic), Isabelle/FOL (classical FOL), 
+	Isabelle/FOL with Zermelo-Fraenkel 
+	set theory. The most popular of these
+	is Isabelle/HOL - the Isabelle
+	instance for higher-order logic.
+	Isabelle/HOL became a replacement for 
+	HOL due to its efficient automation 
+	via a simplifier and support for 
+	external first-order theorem proving 
+	tools~\cite
+	{10.1007/978-3-540-25984-8_28}, and 
+	its vast proof libraries which include 
+	a vast standard library and the 
+	Archive of Formal Proofs~\cite{afp}. 
+	
+	Thus, the reduction of proof-checking
+	to type-checking of abstract datatypes
+	in the meta language is at the core 
+	of LCF-style proof systems which 
+	includes the entire HOL family, 
+	including Isabelle which is a 
+	generic logical framework that 
+	can be instantiated to do proof
+	checking in particular logics.
+	
+
+\section{A Comparison - Automath vs LCF}
+  	While there isn't evidence that the 
+  	Automath project was influenced by 
+  	the LCF project (to the contrary, 
+  	their dates overlap), the 
+  	\textit{LCF approach}, credited 
+  	to Edinburgh LCF is the approach
+  	followed by most - if not all - 
+  	proof assistants today. 
+  	Theorem provers that follow the 
+  	LCF approach implement a small 
+  	proof kernel that facilitates 
+  	the creation of theorems. This 
+  	proof kernel usually ensures 
+  	soundness by some form of 
+  	type-checking. In this sense, 
+  	Automath, and its successors also 
+  	follow the LCF approach with 
+  	type-checking proof terms to have 
+  	types as propositions, using the 
+  	Curry-Howard Isomorphism. Some works 
+  	claim that Coq is a descendant of 
+  	LCF~\cite
+  	{DBLP:journals/corr/abs-1907-02836}. 
+  	On the other hand, the de Bruijn 
+  	criterion - that necessitates 
+  	that either proof terms generated 
+  	by a proof assistant or the proof 
+  	checker itself are externally 
+  	checkable by a simple program - 
+  	is arguably satisfied by LCF-style
+  	theorem provers as well. Thus, 
+  	while we look at some of the 
+  	differences between Automath and 
+  	LCF, and their respective successors, 
+  	we will keep in mind that both 
+  	introduced some principles that 
+  	have become pervasive in modern 
+  	proof assistants.
+  	
+  	While it is true that both 
+  	Automath-style and LCF-style
+  	systems reduce proof-checking
+  	to type checking, the type-checkers 
+  	and indeed the type systems, 
+  	of both tools are quite different.
+  	In LCF and HOL systems, the 
+  	type-checker of the implementation 
+  	language or the meta-language 
+  	guarantees the soundness of the
+  	proof assistant. For Automath-style
+  	ITPs, the Prop type and the 
+  	type-checking algorithm are 
+  	implemented within the 
+  	implementation language. For 
+  	instance, the implementation 
+  	code of Coq describes what it 
+  	means to be a Prop and also 
+  	how a type-checker would check 
+  	terms of type Prop. This distinction
+  	offers some trade-offs. On the one 
+  	hand, in LCF, the trust-base is 
+  	the type-checker of the entire
+  	ML language, whereas in Automath, 
+  	the trust-base is a type-checker
+  	that is implemented inside the 
+  	meta language. In principle, this 
+  	could be smaller than the type
+  	checker of the entire language.
+  	In practice, while this is a 
+  	clear difference in approach,
+  	I have not seen this argument 
+  	being made to claim that one tool 
+  	is better than the other. 
+  	Additionally, LCF has a single 
+  	\texttt{theorem} type and proof
+  	objects i.e. instances of type
+  	\texttt{theorem} cannot be 
+  	inspected or manipulated. Milner
+  	intended for it to be this way
+  	to make LCF space efficient - 
+  	once a proof was type-checked, 
+  	it only mattered \textit{what}
+  	was proven, not \textit{how} it 
+  	was proven. In Automath, on the 
+  	other hand, these proof objects 
+  	can be manipulated and pattern 
+  	matched on by advanced users.
+  	For instance, in Coq, proof terms 
+  	can be pattern matched on by 
+  	advanced users who are able to 
+  	manipulate Coq's OCaml code.
+  	
+  	Automath and its descendents are 
+  	based on Martin-L\"{o}f's dependent 
+  	type theory, in contrast to the
+  	simple type theory implemented by  
+  	LCF and most of	its descendants. 
+  	While polymorphic 
+  	types allow types to be 
+  	parameterized by other types 
+  	types - such as \texttt{list}
+  	$ \alpha$ where $\alpha$ can be 
+  	any type - dependent types allow 
+  	types to \textit{depend} on 
+  	types or values. For instance, 
+  	consider the 
+  	$\texttt{cons}_{\mathbb{N}}$
+  	function for \texttt{list} 
+  	$\mathbb{N}$ (lists of natural 
+  	numbers) that inserts elements into 
+  	lists. \texttt{cons} has type 
+  	$\mathbb{N}	\to \texttt{list } 
+  	\mathbb{N}$. For example, 
+  	inserting the element $1$ into 
+  	the empty list gives the 
+  	singleton list with $1$, expressed
+  	as $\texttt{cons}_{\mathbb{N}}\ 
+  	1\ [\ ]\ = [1]$. We would need 
+  	a $\texttt{cons}_{\alpha}$ for 
+  	each type $\alpha$. In a 
+  	dependent type system, we can 
+  	type a generic \texttt{cons} 
+  	function as $\Pi\ \alpha\ :\ 
+  	\texttt{Type},\ \alpha \to 
+  	\texttt{list}\ \alpha \to 
+  	\texttt{list}\ \alpha$. The 
+  	$\Pi$ indicates that the 
+  	second and third arguments 
+  	to \texttt{cons} \textit{depend}
+  	on the first, which is a type, 
+  	or a value of type \texttt{Type} 
+  	(types are often considered 
+  	values in a hierarchy
+  	of types in dependently typed 
+  	systems). Dependently-typed 
+  	systems allow for more expressive
+  	types that could potentially 
+  	avoid code reuse. Additionally, 
+  	the type system could catch 
+  	certain bugs at compile time
+  	that might not be as 
+  	straightforward to do with 
+  	simply-typed checkers. For 
+  	instance, consider the 
+  	vector type $\texttt{vec}\ 
+  	:\ \texttt{Type} \to \mathbb{N}
+  	\to \texttt{Type}$. Here, the 
+  	first argument specifies the 
+  	type of elements in the vector, 
+  	while the second is a natural 
+  	number representing the 
+  	length of the vector. Not 
+  	only can we define a generic
+  	\texttt{append} function for 
+  	such vectors, we can also 
+  	enforce a constraint on the 
+  	length of the resultant vector
+  	in the \texttt{append} function:
+  	$\texttt{append}\ :\ \Pi\ 
+  	(\alpha\ :\ \texttt{Type})\ 
+  	(m\ n\ :\ \mathbb{N}),\ 
+  	\texttt{vec}\ \alpha\ m \to 
+  	\texttt{vec}\ \alpha\ n \to 
+  	\texttt{vec}\ \alpha\ (m + n)$.
+  	Given that the length of the 
+  	first vector is $m$ and that 
+  	that of its	second is $n$, the 
+  	type system	can enforce at compile 
+  	time that the length of the result 
+  	of appending the vectors is 
+  	$m + n$. Such a constraint 
+  	must be expressed externally 
+  	in a simply-typed system. For 
+  	example, John 
+  	Harrison~\cite{10.1007/11541868_8} 
+  	modeled vectors $\texttt{vec}\ 
+  	\alpha\ n$ in HOL as functions 
+  	of type	$N \to \alpha$ where $N$ 
+  	is a type with exactly $n$ values. 
+  	The examples for dependent 
+  	types were taken from 
+  	Chapter 2 of Theorem Proving 
+  	in Lean~\cite{avigad2016theorem}.
+  
+	LCF implements a classical logic
+	in comparison to Automath's 
+	constructive logic. Every 
+	constructive proof is classically 
+	valid. Classical logic can 
+	be considered as constructive 
+	logic with the added 
+	\textit{law of the excluded 
+	middle} that states that for 
+	every proposition $A$, 
+	$A \lor \neg A$ holds. This can 
+	also be stated as the 
+	double negation elimination 
+	law or as proving a 
+	proposition by contradiction. As
+	such, some propositions might be 
+	easier to prove in classical 
+	logic. A common example is a 
+	classical proof of the 
+	following lemma. 
+	
+	\textbf{Lemma : } \textit{There are 
+	irrational numbers $a$ and $b$ 
+	such that $a^b$ is rational.}\\
+	\textbf{Proof. }
+	$\sqrt{2}^{\sqrt{2}}$ is either 
+	rational or irrational, by the 
+	law of the excluded middle. \\
+	If it's rational, then 
+	$a = b = \sqrt{2}$. \\
+	If, $\sqrt{2}^{\sqrt{2}}$ is 
+	irrational, we know 
+	$(\sqrt{2}^{\sqrt{2}})^{\sqrt{2}} = 
+	2$. Then, $a = \sqrt{2}^{\sqrt{2}}$
+	and $b = \sqrt{2}$.
+	
+	Constructively, this proof is 
+	more complicated and involves 
+	proving that $\sqrt{2}^{\sqrt{2}}$
+	is irrational. However, 
+	constructive logic has a direct 
+	relation to computation, which 
+	is, for instance, demonstarted 
+	by the Curry-Howard Isomorphism.
+	
+	It is possible to do classical 
+	reasoning in some Automath-based
+	systems, and constructive reasoning 
+	in LCF-based ones. For instance, 
+	Isabelle was first created as 
+	a tool to reason in constructive 
+	logic, and its first object-logic
+	was Isabelle/CTT,based on 
+	constructive type theory. While
+	Coq's logic is fully constructive,
+	classical axioms such as the 
+	law of the excluded middle and the 
+	axiom of choice can be added as 
+	additional axioms to Coq to do 
+	classical reasoning. Since 
+	constructive proofs are 
+	programs, extraction of 
+	programs that are correct
+	by constructions from proof 
+	assistants like Coq is relatively 
+	straightforward.
+	
+	While these theoretical aspects 
+	are quite fundamental in 
+	differentiating LCF and Automath 
+	and their respective descendants, 
+	more practical aspects might 
+	play a role in choosing between 
+	modern-day proof assistants. 
+	Isabelle, one of the most 
+	popular LCF-style provers today,
+	offers a structured proof language
+	called Isar, and Isabelle/HOL, 
+	its most popular variant,
+	offers on top of its large 
+	standard library, the Archive
+	of Formal Proofs~\cite{afp} - a 
+	comprehensive collection of 
+	proofs contributed by the 
+	Isabelle community. In fact, 
+	these vibrant communities for 
+	each proof assistant have 
+	built extensive libraries 
+	for each of them over the years 
+	that might make one more 
+	attractive than the other. For 
+	example, the Coq proof assistant
+	has plenty of libraries and 
+	verification projects available 
+	for reuse~\cite{coqlib}, and 
+	the Lean Theorem Prover also has 
+	an active user community that 
+	maintains a library for 
+	mathematics caleld 
+	mathlib~\cite{10.1145/3372885.3373824}.
+	Other considerations may 
+	include utilities such as 
+	independent tactic languages, 
+	for example, Coq's 
+	LTAC~\cite{10.1007/3-540-44404-1_7}.
+	
+  	
+\bibliographystyle{abbrv}
+\bibliography{bib1}
+
+\end{document}
