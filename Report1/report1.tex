@@ -71,13 +71,13 @@
 	and types, and proofs and terms was 
 	discovered independently by H. B. Curry 
 	and W. Howard and is thus termed as 
-	the Curry-Howard(-de Bruijn) isomorphism.
+	the Curry-Howard(-de Bruijn) Isomorphism.
 	
 	\subsection{The Curry-Howard Isomorphism}
 	\label{sec:curry}
 	The Curry-Howard Isomorphism encapsulates 
 	the correspondence between proofs and 
-	terms/programs and between propositions
+	terms (programs) and between propositions
 	and types. In doing so, it equates the 
 	notion of proving, which is generally 
 	considered hard, to computing.
@@ -118,7 +118,7 @@
 	and two juxtaposed terms represent the 
 	application of the first one to the second.
 	Given a context $\Gamma$ that gives types 
-	to variables, the rules for deriving 
+	to free variables, the rules for deriving 
 	types of $\lambda$-terms are as follows: \\ \\
 	\begin{math}
 		\infer[(\texttt{var})]{\Gamma \vdash x : A}
@@ -293,8 +293,8 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	given the evidence for \texttt{P $\land$ Q},
 	it destructs this evidence by pattern
 	matching on all things a conjunction can 
-	be. From our definition above, we only 
-	know that it can be a combination of 
+	be. From our definition above, we know 
+	that it can only be a combination of 
 	the proofs of its conjuncts. From the 
 	only case of the match, it returns the 
 	right proof term. This function 
@@ -393,26 +393,31 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	and returns a \texttt{theorem} object.
 	
 	\subsection{The HOL Family}
-	LCF moved to Cambridge from Edinburgh
+	LCF moved to 
+	Cambridge~\cite{10.5555/34057} 
+	from Edinburgh
 	through Milner's collaborators. The 
-	HOL (Higher-Order Logic) theorem 
-	prover was created for hardware 
-	verification, but its support for 
-	higher-order logic made it and 
+	HOL (Higher-Order 
+	Logic)~\cite{10.5555/345868.345890}
+	theorem prover was created for 
+	hardware verification, but its support 
+	for higher-order logic made it and 
 	its descendants relevant for 
 	various applications. The first 
 	stable version of HOL - HOL88 - was
 	written in Common Lisp. HOL90 was 
-	then implemented in Standard ML. 
-	HOL Light was another variant 
-	implemented in Caml Light that 
-	prioritizes constructive logic 
-	over classical logic. 
+	then implemented in Standard ML. HOL 
+	Light~\cite{10.1007/978-3-642-03359-9_4}
+	was another variant implemented in Caml 
+	Light that prioritizes constructive 
+	logic over classical logic. 
 	
 	As new logics
 	were designed, so were proof 
 	assistants that could reason about 
-	them. Isabelle was born as an 
+	them. 
+	Isabelle~\cite{10.1007/978-3-540-71067-7_7}
+	was born as an 
 	LCF-style proof assistant for 
 	Martin-L\"{o}f's constructive type 
 	theory and grew into a general 
@@ -448,6 +453,14 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	When there are a non-deterministic 
 	set of unifiers, backtracking allows
 	different solutions to be explored.
+	Paulson used a higher-order 
+	unification algorithm by 
+	Huet~\cite{HUET197527}, who 
+	also proved its undecidability. 
+	Unification of higher-order terms
+	was novel when Isabelle used it, 
+	but it is common in today's 
+	proof assistants.
 	
 	In Isabelle, the \texttt{theorem}
 	type can essentially be extended to 
@@ -458,7 +471,8 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	logic), Isabelle/FOL (classical FOL), 
 	Isabelle/FOL with Zermelo-Fraenkel 
 	set theory. The most popular of these
-	is Isabelle/HOL - the Isabelle
+	is Isabelle/HOL~\cite{10.5555/1791547} 
+	- the Isabelle
 	instance for higher-order logic.
 	Isabelle/HOL became a replacement for 
 	HOL due to its efficient automation 
@@ -467,7 +481,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	tools~\cite
 	{10.1007/978-3-540-25984-8_28}, and 
 	its vast proof libraries which include 
-	a vast standard library and the 
+	a standard library and the 
 	Archive of Formal Proofs~\cite{afp}. 
 	
 	Thus, the reduction of proof-checking
@@ -521,9 +535,8 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	have become pervasive in modern 
   	proof assistants.
   	
-  	While it is true that both 
-  	Automath-style and LCF-style
-  	systems reduce proof-checking
+  	Although both Automath-style and 
+  	LCF-style systems reduce proof-checking
   	to type checking, the type-checkers 
   	and indeed the type systems, 
   	of both tools are quite different.
@@ -532,15 +545,17 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	language or the meta-language 
   	guarantees the soundness of the
   	proof assistant. For Automath-style
-  	ITPs, the Prop type and the 
+  	ITPs, the \texttt{Prop} type and the 
   	type-checking algorithm are 
   	implemented within the 
   	implementation language. For 
-  	instance, the implementation 
-  	code of Coq describes what it 
-  	means to be a Prop and also 
-  	how a type-checker would check 
-  	terms of type Prop. This distinction
+  	instance, what it means to be a 
+  	\texttt{Prop} and how a 
+  	type-checker would check 
+  	terms of type \texttt{Prop} are 
+  	inside OCaml (the 
+  	implementation language of Coq). 
+  	This distinction
   	offers some trade-offs. On the one 
   	hand, in LCF, the trust-base is 
   	the type-checker of the entire
@@ -567,8 +582,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	was proven, not \textit{how} it 
   	was proven. In Automath, on the 
   	other hand, these proof objects 
-  	can be manipulated and pattern 
-  	matched on by advanced users.
+  	can be manipulated.
   	For instance, in Coq, proof terms 
   	can be pattern matched on by 
   	advanced users who are able to 
@@ -594,6 +608,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	numbers) that inserts elements into 
   	lists. \texttt{cons} has type 
   	$\mathbb{N}	\to \texttt{list } 
+  	\mathbb{N} \to \texttt{list } 
   	\mathbb{N}$. For example, 
   	inserting the element $1$ into 
   	the empty list gives the 
@@ -648,7 +663,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	\texttt{vec}\ \alpha\ (m + n)$.
   	Given that the length of the 
   	first vector is $m$ and that 
-  	that of its	second is $n$, the 
+  	that of the	second is $n$, the 
   	type system	can enforce at compile 
   	time that the length of the result 
   	of appending the vectors is 
@@ -696,7 +711,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	law of the excluded middle. \\
 	If it's rational, then 
 	$a = b = \sqrt{2}$. \\
-	If, $\sqrt{2}^{\sqrt{2}}$ is 
+	If $\sqrt{2}^{\sqrt{2}}$ is 
 	irrational, we know 
 	$(\sqrt{2}^{\sqrt{2}})^{\sqrt{2}} = 
 	2$. Then, $a = \sqrt{2}^{\sqrt{2}}$
@@ -705,10 +720,18 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	Constructively, this proof is 
 	more complicated and involves 
 	proving that $\sqrt{2}^{\sqrt{2}}$
-	is irrational. However, 
-	constructive logic has a direct 
-	relation to computation, which 
-	is, for instance, demonstarted 
+	is irrational. However,
+	constructive proofs 
+	\textit{construct} a proof object. 
+	For proofs of existential 
+	statements and disjunctions, we 
+	actually have a proof object as a 
+	witness to the existential and 
+	of one of the disjuncts. Due 
+	to its insistence on computable 
+	objects, constructive logic has 
+	a direct relation to computation, 
+	which is, for instance, demonstarted 
 	by the Curry-Howard Isomorphism.
 	
 	It is possible to do classical 
@@ -718,14 +741,14 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	Isabelle was first created as 
 	a tool to reason in constructive 
 	logic, and its first object-logic
-	was Isabelle/CTT,based on 
+	was Isabelle/CTT, based on 
 	constructive type theory. While
 	Coq's logic is fully constructive,
 	classical axioms such as the 
 	law of the excluded middle and the 
 	axiom of choice can be added as 
 	additional axioms to Coq to do 
-	classical reasoning. Since 
+	classical reasoning. Also, since 
 	constructive proofs are 
 	programs, extraction of 
 	programs that are correct
@@ -764,8 +787,8 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	the Lean Theorem Prover also has 
 	an active user community that 
 	maintains a library for 
-	mathematics caleld 
-	mathlib~\cite{10.1145/3372885.3373824}.
+	mathematics called 
+	\texttt{mathlib}~\cite{10.1145/3372885.3373824}.
 	Other considerations may 
 	include utilities such as 
 	independent tactic languages, 
