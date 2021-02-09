@@ -502,10 +502,9 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	their dates overlap), the 
   	\textit{LCF approach}, credited 
   	to Edinburgh LCF is the approach
-  	followed by most - if not all - 
-  	proof assistants today. 
-  	Theorem provers that follow the 
-  	LCF approach implement a small 
+  	followed by most proof assistants 
+  	today. Theorem provers that follow 
+  	the LCF approach implement a small 
   	proof kernel that facilitates 
   	the creation of theorems. This 
   	proof kernel usually ensures 
@@ -549,11 +548,11 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	type-checking algorithm are 
   	implemented within the 
   	implementation language. For 
-  	instance, what it means to be a 
-  	\texttt{Prop} and how a 
+  	instance, in Coq, what it means to 
+  	be a \texttt{Prop} and how a 
   	type-checker would check 
   	terms of type \texttt{Prop} are 
-  	inside OCaml (the 
+  	described in OCaml (the 
   	implementation language of Coq). 
   	This distinction
   	offers some trade-offs. On the one 
