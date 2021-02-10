@@ -1,0 +1,53 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
+\usepackage{minted}
+
+\usepackage{hyperref}
+\hypersetup{
+ pdfborder={0 0 0},
+ colorlinks=true,
+ linkcolor=blue,
+ urlcolor=blue,
+ citecolor=blue
+}
+\usepackage{cleveref}
+
+
+\newcommand{\rem}[1]{\textcolor{red}{[#1]}}
+\newcommand{\ed}[1]{\textcolor{blue}{#1}}
+\newcommand{\ct}[1]{\rem{#1 --ct}}
+
+\begin{document}
+\title{Comprehensive Exam Report 2 - Relating Higher Order and First-Order Logics}
+\author{Arjun Viswanathan}
+\date{}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+	In this report, we will discuss the internals 
+	of two tools that use ATPs to provide 
+	automation to ITPs - SMTCoq and Sledgehammer's
+	SMT integration. Specifically, we will look
+	at the following aspects of each tool. 
+	For SMTCoq, we will study 
+	how proof by reflection is used to 
+	\textit{reflect} proofs from an SMT solver
+	to Coq's logic, and the data structures 
+	used to facilitate this reflection.
+	Sledgehammer provides a translation of 
+	a fragment higher-order logic into 
+	first-order logic, so that 
+	SMT-solvers can reason about them. We will
+	look into this translation in detail.
+
+\bibliographystyle{abbrv}
+\bibliography{bib2}
+
+\end{document}
