@@ -37,8 +37,9 @@
 	assistants are driven by a small kernel, and 
 	reduce proof checking to type checking but 
 	their type systems vary significantly. 
-	Automath is driven by the Curry-Howard 
-	Isomorphism whereas type checking in LCF 
+	The Curry-Howard Isomorphism is central 
+	to the Automath type system,
+	whereas type checking in LCF 
 	is reduced to type checking in its 
 	implementation language of abstract data 
 	type instances. We take a look at the 
@@ -50,20 +51,19 @@
 \section{De Bruijn's Automath}
 \label{sec:automath}
 	N. G. de Bruijn introduced the Automath 
-	language in the 
+	language in 
 	1968~\cite{deBruijn1983, 10.1007/BFb0060623} 
 	as a means to formalize mathematics in 
 	computers so that it can be mechanically
-	checked. This resulted in the Automath 
-	project that, among other things, resulted
-	in the development of a proof-checker 
-	for the Automath language~\cite{5df50ef4ddff4ff091125a511f563319, 
+	checked. This led to the Automath 
+	project that, among other things, 
+	produced a proof-checker for the Automath language~\cite{5df50ef4ddff4ff091125a511f563319, 
 	c398556a074e49a193d5035ae32aaa79}.
 
 	Inspired by colleague A. Heyting, De Bruijn 
 	realized that in a typed language, logical 
 	propositions can also be considered types 
-	of their corresponding proofs, which would 
+	of their corresponding proofs, which  
 	constitute terms of the respective types.
 	This crucial insight allowed logic to be 
 	done in a typed language. This 
@@ -104,6 +104,10 @@
 		{\Delta \vdash A \to B & \Delta \vdash A}
 	\end{math} 
 	\\ \\
+	Here, $\Delta$ is a set of implicational 
+	formulas and $A$ and $B$ range over 
+	implicational formulas. 
+	
 	Untyped $\lambda-$calculus gives a basic 
 	mechanism for dealing with functions, making 
 	it the foundation of functional programming.
@@ -225,7 +229,8 @@
 	book~\cite{Pierce:SF1}.
 	
 	Logical conjunction in Coq is 
-	defined as a proposition that 
+	defined as a proposition 
+	(\texttt{Prop} in Coq) that 
 	can be constructed only using 
 	the two conjuncts. It is defined
 	as an inductive type with 
@@ -285,7 +290,7 @@ Qed.
 Definition ex : forall P Q, P /\ Q -> P :=
   fun P Q HPQ => 
     match HPQ with
-	  | conj P Q => Q
+	  | conj HP HQ => HQ
     end.
 \end{minted}
 	This definition defines a function that 
@@ -539,12 +544,12 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	to type checking, the type-checkers 
   	and indeed the type systems, 
   	of both tools are quite different.
-  	In LCF and HOL systems, the 
+  	In LCF and the HOL systems, the 
   	type-checker of the implementation 
   	language or the meta-language 
   	guarantees the soundness of the
   	proof assistant. For Automath-style
-  	ITPs, the \texttt{Prop} type and the 
+  	ITPs, the type of propositions and the 
   	type-checking algorithm are 
   	implemented within the 
   	implementation language. For 
@@ -595,7 +600,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	While polymorphic 
   	types allow types to be 
   	parameterized by other types 
-  	types - such as \texttt{list}
+  	 - such as \texttt{list}
   	$ \alpha$ where $\alpha$ can be 
   	any type - dependent types allow 
   	types to \textit{depend} on 
@@ -616,7 +621,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	1\ [\ ]\ = [1]$. We would need 
   	a $\texttt{cons}_{\alpha}$ for 
   	each type $\alpha$. In a 
-  	dependent type system, we can 
+  	dependently typed system, we can 
   	type a generic \texttt{cons} 
   	function as $\Pi\ \alpha\ :\ 
   	\texttt{Type},\ \alpha \to 

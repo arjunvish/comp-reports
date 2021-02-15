@@ -31,12 +31,14 @@
 
 \section{Introduction}
 \label{sec:intro}
-	In this report, we will discuss the internals 
-	of two tools that use ATPs to provide 
-	automation to ITPs - SMTCoq and Sledgehammer's
-	SMT integration. Specifically, we will look
-	at the following aspects of each tool. 
-	For SMTCoq, we will study 
+	In this report, we will discuss the 
+	internals of two tools that use ATPs to 
+	provide automation to ITPs - 
+	SMTCoq~\cite{DBLP:phd/hal/Keller13} and 
+	Sledgehammer's SMT solver 
+	integration~\cite{bohme}. Specifically, 
+	we will look at the following aspects 
+	of each tool. For SMTCoq, we will study 
 	how proof by reflection is used to 
 	\textit{reflect} proofs from an SMT solver
 	to Coq's logic, and the data structures 
@@ -44,9 +46,85 @@
 	Sledgehammer provides a translation of 
 	a fragment higher-order logic into 
 	first-order logic, so that 
-	SMT-solvers can reason about them. We will
-	look into this translation in detail.
+	SMT-solvers can reason about them. We 
+	will look into this translation in 
+	detail.
 
+\section{SMTCoq}
+\label{sec:smtcoq}
+	SMTCoq is a skeptical cooperation between 
+	the Coq proof assistant, and SAT and SMT 
+	solvers that was implemented as a Coq 
+	plugin.
+	
+	Automated theorem provers (ATPs) like SAT 
+	and SMT solvers are susceptible to bugs 
+	due to the large code-bases used to 
+	support	their automaticity. Interactive 
+	theorem provers (ITPs) like Coq have a 
+	small trustable proof kernel which is 
+	liable to be compromised if it trusts 
+	external results. To avoid extending 
+	its trust-base, SMTCoq requires the 
+	ATPs to be proof-producing, and uses 
+	Coq's computational capabilities to 
+	check these, in a process called 
+	computational reflection. 
+	
+	\subsection{Proof by Reflection}
+	\label{reflect}
+	Computational reflection is used 
+	to prove propositions, or formulas 
+	of type \texttt{Prop} in Coq,
+	using external ATPs that can prove 
+	these formulas. To avoid 
+	compromising Coq's kernel, the
+	external ATP doesn't directly 
+	produce proofs for \texttt{Prop}s.
+	Instead, formulas in the ATP's 
+	language are represented in Coq
+	using data structures. This is 
+	called a \textit{deep embedding}.
+	Then, Coq formulas, represented 
+	using Coq types such as 
+	\texttt{Prop} form a 
+	\textit{shallow embedding}. 
+	A proof produced by an ATP in 
+	the deep embedding is 
+	\textit{reflected} to a proof 
+	of a Coq \texttt{Prop} (the 
+	shallow embedding). This 
+	process requires an 
+	\textit{interpretation function}
+	which defines the meaning of 
+	formulas in the deep embedding in 
+	terms of those in the shallow 
+	embedding. Additionally, the 
+	\textit{reflection principle} is 
+	a generic lemma that relates 
+	formulas in the two embeddings. 
+	This is a powerful lemma that 
+	relates all formulas represented
+	as data structures in Coq, to 
+	formulas represented as 
+	\texttt{Prop}s. The proof 
+	involves an induction 
+	on the structure of the data 
+	structures in order to prove 
+	their similarity to the shallow 
+	terms, while using the
+	interpretation function. This 
+	proof is factored once and 
+	can be reused by instantiating 
+	it with specific formulas 
+	proved by the external solvers. 
+	Work is then done by Coq's 
+	computational mechanism to 
+	check that the proof trace
+	from the SMT solver proves 
+	the formula it claims to prove.
+	
+	
 \bibliographystyle{abbrv}
 \bibliography{bib2}
 
