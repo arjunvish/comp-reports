@@ -79,8 +79,9 @@
 	the correspondence between proofs and 
 	terms (programs) and between propositions
 	and types. In doing so, it equates the 
-	notion of proving, which is generally 
-	considered hard, to computing.
+	notion of proving to computing.
+	Additionally, it reduces proof-checking 
+	to type-checking.
 	Initially, Haskell Curry noticed the 
 	correspondence between minimal 
 	implication logic and a simple 
@@ -138,11 +139,12 @@
 	\\ \\
 	Curry noticed an isomorphism between these 
 	2 systems of rules. Howard extended this to 
-	predicate logic and Heyting arithmetic. The 
-	Curry-Howard isomorphism for the systems 
+	predicate logic and to Heyting arithmetic. 
+	The Curry-Howard isomorphism for the systems 
 	of natural deduction for minimal implication 
 	logic and the typing rules of untyped lambda 
-	calculus terms can be stated as follows:\\
+	calculus terms consists of two mappings,
+	one of which can be stated as:\\
 
 	\noindent If $\Sigma$ is a derivation in natural 
 	deduction with conclusion $\Delta \vdash A$,
@@ -152,25 +154,34 @@
 	$\lambda-$term,	and $\bar{\Delta}$ is a 
 	context such that for each $B \in \Delta$, 
 	there exists some $x$ such that 
-	$x : B \in \bar{\Delta}$. There 
-	is also a mapping from typable $\lambda-$ terms
-	to derivations that completes the isomorphism.
+	$x : B \in \bar{\Delta}$. There is also a 
+	reverse mapping that completes the isomorphism:\\
+	
+	\noindent If $\bar{\Delta} \vdash \bar{\Sigma} 
+	: A$, is a typable term, then 
+	there exists a natural deduction derivation 
+	$\Sigma$ with conclusion $\Delta \vdash A$.
+	
 	
 	\subsection{Automath to Coq}
 	\label{sec:coq}
 	The Curry-Howard Isomorphism is prevalent in 
 	Automath and subsequent theorem provers that 
-	were motivated by Automath. One of the most 
-	popular of this lineage of Automath-style 
-	theorem provers is Coq. In Coq, a theorem is a 
-	formula which is proven using functions 
-	called tactics. To prove a conjecture in Coq, 
-	it suffices to (and is necessary to) provide 
+	were motivated by Automath. Some of these 
+	include Agda~\cite{norell:thesis}, 
+	Coq~\cite{CoPa89}, and the Lean theorem 
+	prover~\cite{10.1007/978-3-319-21401-6_26}.
+	One of the most popular of this lineage of 
+	Automath-style theorem provers is Coq. In 
+	Coq, a theorem is a formula which is 
+	proven using functions called tactics. To 
+	prove a conjecture in Coq, it suffices to 
+	(and is necessary to) provide 
 	to Coq, a term whose type is the proposition 
 	being proved. In most cases, this is done 
 	using tactics that continuously modify the 
-	proof term, so it has no holes. Initially, 
-	the entire term is a hole that has the goal's 
+	proof term. Initially, the entire term is a 
+	"hole" to be filled, that has the goal's 
 	type, and tactics break this down into smaller 
 	and smaller holes, until all of them are 
 	filled.
@@ -322,15 +333,14 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	implement the LCF logic and write proofs 
 	in it. ML abbreviates meta language, 
 	to distinguish itself from the object 
-	language its encoding, that is, the 
+	language it is encoding, that is, the 
 	proof calculus. The features of ML 
 	include a polymorphic type system, 
 	functions as first-class objects 
 	that can be passed around like terms, 
 	and abstract datatypes - data 
-	structures that restrict the internal 
-	data to access via a fixed set of 
-	functions. 
+	structures that restrict access to the 
+	internal via a fixed set of functions. 
 	
 	For Edinburgh LCF,
 	Milner had the idea of recording proof
@@ -357,12 +367,13 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	soundly. 
 	
 	Milner also introduced the concepts of 
-	backward proofs, tactics and tacticals.
-	While it was common for proofs to be 
-	constructed forward - from the axioms 
-	to the goal to be proved, a backward 
-	approach breaks down the goals into 
-	simpler (sub-)goals and eventually 
+	tactics and tacticals, and imported the 
+	concept of backward proofs to proof 
+	assistants. While it was common for 
+	proofs to be constructed forward - from 
+	the axioms to the goal to be proved, a 
+	backward approach breaks down the goals 
+	into simpler (sub-)goals and eventually 
 	to something resembling the axioms. A
 	tactic is a function that helps in 
 	this reduction, and tacticals can 
@@ -571,22 +582,22 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	checker of the entire language.
   	In practice, while this is a 
   	clear difference in approach,
-  	I have not seen this argument 
+  	we have not seen this argument 
   	being made to claim that one tool 
   	is better than the other. 
-  	Additionally, LCF has a single 
-  	\texttt{theorem} type and proof
-  	objects i.e. instances of type
+  	Additionally, because LCF's 
+  	\texttt{theorem} type is abstract, 
+  	proof objects i.e. instances of type
   	\texttt{theorem} cannot be 
-  	inspected or manipulated. Milner
+  	inspected or modified. Milner
   	intended for it to be this way
   	to make LCF space efficient - 
   	once a proof was type-checked, 
   	it only mattered \textit{what}
   	was proven, not \textit{how} it 
   	was proven. In Automath, on the 
-  	other hand, these proof objects 
-  	can be manipulated.
+  	other hand, proof objects can be 
+  	are available for inspection.
   	For instance, in Coq, proof terms 
   	can be pattern matched on by 
   	advanced users who are able to 
@@ -671,7 +682,8 @@ Definition ex : forall P Q, P /\ Q -> P :=
   	type system	can enforce at compile 
   	time that the length of the result 
   	of appending the vectors is 
-  	$m + n$. Such a constraint 
+  	$m + n$. In contrast, such a 
+  	constraint 
   	must be expressed externally 
   	in a simply-typed system. For 
   	example, John 
@@ -690,8 +702,9 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	constructive logic. Every 
 	constructive proof is classically 
 	valid. Classical logic can 
-	be considered as constructive 
-	logic with the added 
+	be considered as an extension 
+	of constructive 
+	logic with the 
 	\textit{law of the excluded 
 	middle} that states that for 
 	every proposition $A$, 
@@ -700,8 +713,11 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	double negation elimination 
 	law or as proving a 
 	proposition by contradiction. As
-	such, some propositions might be 
-	easier to prove in classical 
+	such, some statements that are true 
+	in classical logic might not have 
+	a proof in constructive logic. 
+	Additionally, some propositions might 
+	be easier to prove in classical 
 	logic. A common example is a 
 	classical proof of the 
 	following lemma. 
@@ -720,22 +736,22 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	$(\sqrt{2}^{\sqrt{2}})^{\sqrt{2}} = 
 	2$. Then, $a = \sqrt{2}^{\sqrt{2}}$
 	and $b = \sqrt{2}$.
-	
 	Constructively, this proof is 
 	more complicated and involves 
 	proving that $\sqrt{2}^{\sqrt{2}}$
 	is irrational. However,
 	constructive proofs 
-	\textit{construct} a proof object. 
+	\textit{construct} a proof 
+	object~\cite{class}. 
 	For proofs of existential 
 	statements and disjunctions, we 
 	actually have a proof object as a 
 	witness to the existential and 
 	of one of the disjuncts. Due 
-	to its insistence on computable 
+	to its insistence on constructive 
 	objects, constructive logic has 
 	a direct relation to computation, 
-	which is, for instance, demonstarted 
+	which is, for instance, demonstrated 
 	by the Curry-Howard Isomorphism.
 	
 	It is possible to do classical 
@@ -770,12 +786,11 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	Isabelle, one of the most 
 	popular LCF-style provers today,
 	offers a structured proof language
-	called Isar, and Isabelle/HOL, 
-	its most popular variant,
+	called Isar. Isabelle/HOL, 
 	offers on top of its large 
 	standard library, the Archive
-	of Formal Proofs~\cite{afp} - a 
-	comprehensive collection of 
+	of Formal Proofs~\cite{afp} --- 
+	a comprehensive collection of 
 	proofs contributed by the 
 	Isabelle community. In fact, 
 	these vibrant communities for 
@@ -787,7 +802,7 @@ Definition ex : forall P Q, P /\ Q -> P :=
 	example, the Coq proof assistant
 	has plenty of libraries and 
 	verification projects available 
-	for reuse~\cite{coqlib}, and 
+	for reuse~\cite{coqlib}. Similarly, 
 	the Lean Theorem Prover also has 
 	an active user community that 
 	maintains a library for 

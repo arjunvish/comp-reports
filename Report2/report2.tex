@@ -44,7 +44,7 @@
 	to Coq's logic, and the data structures 
 	used to facilitate this reflection.
 	Sledgehammer provides a translation of 
-	a fragment higher-order logic into 
+	a fragment of higher-order logic into 
 	first-order logic, so that 
 	SMT-solvers can reason about them. We 
 	will look into this translation in 
@@ -54,7 +54,7 @@
 \label{sec:smtcoq}
 	SMTCoq is a skeptical cooperation between 
 	the Coq proof assistant, and SAT and SMT 
-	solvers that was implemented as a Coq 
+	solvers, implemented as a Coq 
 	plugin.
 	
 	Automated theorem provers (ATPs) like SAT 
@@ -123,6 +123,13 @@
 	check that the proof trace
 	from the SMT solver proves 
 	the formula it claims to prove.
+	
+	Deep and shallow embeddings were 
+	first introduced while discussing 
+	while embedding hardware 
+	description languages in the HOL
+	theorem 
+	prover~\cite{10.5555/645902.672777}.
 	
 	
 \bibliographystyle{abbrv}
