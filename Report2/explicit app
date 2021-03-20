@@ -1,0 +1,62 @@
+HOL
+===
+f : int -> int -> int
+f 1
+f 0 0
+
+FOL
+===
+app : (int -> int) -> int
+map : sort -> sort -> sort
+f : map int int
+f 1 := f 1
+f 0 0 := app (f 0) 0
+app 
+
+HOL
+===
+g : int -> int
+g
+g 1
+
+FOL
+===
+--app : (int -> int) -> int
+map : sort -> sort -> sort
+g : map int int
+g := g
+g 1 := app g 1
+app : sort -> int
+
+c : C
+h : C -> A -> B
+h c : A -> B
+h c = g
+h c a != g a
+g : A -> B
+a1 a2 : A
+b : B
+g a1 = b
+f a2 != b
+a1 = a2
+f = g
+
+(declare-sort Map 0)
+(declare-fun g () Map)
+(declare-fun f () Map)
+(declare-fun h () Map)
+(declare-fun apply (Map I) I)
+(declare-fun apply1 (Map I) Map)
+(declare-fun a1 () I)
+(declare-fun a2 () I) 
+(declare-fun b () I)
+(declare-fun c () I)
+(assert (= (apply g a1) b))
+(assert (distinct (apply f a2) b))
+(assert (distinct (apply (apply1 h c) a) (apply g a)))
+(assert (= f g))
+(assert (= a1 a2))
+(assert (= (apply1 h c) g))
+
+(declare-fun succ () (Map Int Int))
+(assert (= (2 (app_int_int succ 1))))
