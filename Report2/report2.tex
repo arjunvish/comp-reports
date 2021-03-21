@@ -1259,8 +1259,23 @@ Inductive lit : Type :=
 		to rely on the decision procedures for 
 		these theories and not just the premises
 		provided by Sledgehammer, to prove the 
-		conjecture. The rest of the constants are 
-		translated as uninterpreted constants.
+		conjecture. 
+		
+		The rest of the constants are 
+		translated as uninterpreted constants, 
+		and this is a source of 
+		incompleteness --- the SMT solver only 
+		knows as much about an uninterpreted 
+		constants as the additional constraints 
+		(premises) will tell it. If the premise 
+		selector of Sledgehammer doesn't capture 
+		the constraints needed to prove something
+		about an uninterpreted constant, the SMT 
+		solver will not be able to prove it.
+		Even with interpreted constants, if the 
+		constants belong ot an undecidable theory,
+		the SMT solver will not necessarily be 
+		able to prove it.
 		
 \bibliographystyle{abbrv}
 \bibliography{bib2}
