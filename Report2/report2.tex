@@ -507,12 +507,14 @@ Inductive lit : Type :=
 	Isabelle/HOL, Sledgehammer 
 	selects a set of facts 
 	$\Gamma$ that might be relevant 
-	to proving $\Phi$ and sends 
-	$\Gamma \land \neg \Phi$ to the 
-	SMT solver to check for 
-	unsatisfiability. If the SMT 
-	solver is able to conclude 
-	unsatisfiability, it returns 
+	to proving $\Phi$ and sends
+	the formula $\Gamma \land \neg 
+	\Phi$ to the SMT solver to check 
+	for unsatisfiability. If the SMT 
+	solver is able to refute the 
+	conjecture (i.e., conclude 
+	the unsatisfiability of its 
+	negation), it returns 
 	a proof trace which is 
 	used to guide the proof search 
 	of Metis inside Isabelle/HOL.
@@ -521,18 +523,20 @@ Inductive lit : Type :=
 	is more expressive than 
 	the SMT solver's multi-sorted
 	first order logic (MSFOL),
-	the entirety of the conjecture
+	the entirety of the formula
 	$\Gamma \land \neg \Phi$ may not 
 	be understandable to the SMT 
-	solver. Although, parts of 
-	this conjecture may be fully 
-	first-order because FOL is 
-	a subset of HOL. For the 
-	rest of it, Sledgehammer
-	has a translation from 
-	higher-order to first-order
-	logic which is described 
-	in the rest of this section.
+	solver. Parts of the formula,
+	however, may be fully 
+	first-order (FOL is 
+	a subset of HOL). Bohme et al.
+	extended Sledgehammer with 
+	a translation from higher-order 
+	to first-order logic, so that 
+	it can reason about the remainder
+	of the formula. This translation
+	is discussed in the rest of this 
+	section.
 	
 	\subsection{Higher-Order Logic}
 	\label{sec:hol}
@@ -543,12 +547,11 @@ Inductive lit : Type :=
 	reference~\cite{10.5555/155278}. 
 	HOL consists of 
 	types $\tau$ and terms $t$. 
-	
 	\begin{align*}
 	\tau &:= \alpha\ |\ \kappa^n\ 
 	\tau_1 ... \tau_n\\
-	t &:= x^{\tau}\ |\ c^{\tau}\ |\ t_1\ t_2\ |\ 
-	\lambda x^{\tau}.t
+	t &:= x^{\tau}\ |\ c^{\tau}\ |\ t_1\ t_2\ 
+	|\ \lambda x^{\tau}.t
 	\end{align*}	
 	Types $\tau$ are either type
 	variables $\alpha$ or 
@@ -556,10 +559,11 @@ Inductive lit : Type :=
 	constructors $\kappa^n$ to 
 	$n$ types ($n$ is usually omitted). 
 	Particular types of interest are 
-	the function type constructor 
-	$\to^{2}$, the Boolean type 
-	--- $\texttt{bool}$ (or 
-	$\texttt{bool}^0$), the type of 
+	the function type --- formed by 
+	applying the arrow type constructor 
+	$\to^{2}$ to other types, the 
+	Boolean type --- $\texttt{bool}$ 
+	(or $\texttt{bool}^0$), the type of 
 	natural numbers --- \texttt{nat},
 	and integers --- \texttt{int}.
 	Terms are typed variables, 
@@ -614,7 +618,7 @@ Inductive lit : Type :=
 		(t_1, ..., t_n)
 	\end{align*}
 	Terms are either sorted variables, 
-	or functions applied to terms.
+	or applications of functions to terms.
 	Formulas are constants or logical 
 	connectives applied to other 
 	formulas, quantified formulas, 
@@ -631,23 +635,28 @@ Inductive lit : Type :=
 	integration (Bohme et al.) performs 
 	a translation 
 	of HOL formulas to MSFOL formulas.
-	This translation is sound ---
-	if the translated problem is 
-	valid, then the original problem 
-	is also valid --- but not complete
-	--- a valid problem is not 
-	necessarily translated to a 
-	valid one. This means that the 
-	translation might not be 
-	successful in translating 
-	certain HOL problems which is
-	expected, since HOL is a 
-	much more expressive logic than 
-	MSFOL. $\llbracket\ \rrbracket$
+	$\llbracket\ \rrbracket$
 	is the translation function 
 	that maps both HOL types and 
 	terms to MSFOL sorts and terms,
 	respectively.
+	The translation is sound --- 
+	given a formula 
+	$F = \Gamma \land \Phi$ in HOL, if 
+	$\llbracket F \rrbracket$ is refutable 
+	($\neg \llbracket F \rrbracket$
+	is unsatisfiable) in MSFOL, then 
+	$F$	is valid in HOL --- but not 
+	complete --- If $F$ is valid in 
+	HOL, $\llbracket F \rrbracket$ is 
+	not necessarily refutable in MSFOL. 
+	The translation might not carry over 
+	enough information about certain HOL 
+	formulas so that the their 
+	refutability can be concluded in 
+	MSFOL, which is	expected, since HOL 
+	is a much more expressive logic than 
+	MSFOL. 
 	
 	Since MSFOL is a subset of 
 	HOL, we can see HOL as a 
@@ -744,7 +753,8 @@ Inductive lit : Type :=
 		partial application of $t$ 
 		which is a variable of type 
 		$\tau_1 \to \tau_2 \to \tau$
-		to argument $t_1$ and this 
+		to argument $t_1$ (of type 
+		$\tau_1$) and this 
 		application has type 
 		$\tau_2 \to \tau$.
 		This is not directly 
@@ -788,7 +798,7 @@ Inductive lit : Type :=
 			$\texttt{bool} \to \beta$
 			only if \texttt{int} matches 
 			$\beta$. Finally, for our running 
-			example taken from \cite{bohme}, 
+			example taken from Bohme et al., 
 			${\texttt{bool} \to \kappa}$
 			matches $\alpha \to \beta$,
 			where $\kappa$ is a monomorphic
@@ -823,24 +833,48 @@ Inductive lit : Type :=
 				$(\forall f^{\texttt{bool} 
 				\to \kappa},\ x^{\alpha},\ 
 				xs^{\texttt{list }\alpha}. 
-				\texttt{apphd }f\ (\texttt{cons }
+				\texttt{ apphd }f\ (\texttt{cons }
 				x \ xs) = f\ x)$
 			\end{center}
-			where implicitly, the instantiation 
+			where the instantiation 
 			has turned all occurrences of $f$ 
 			in the term from $f^{\alpha \to \beta}$ 
 			to $f^{\texttt{bool} \to \kappa}$.
+			\texttt{list $\alpha$} is a compound,
+			polymorphic type of a list of 
+			$\alpha$'s where $\alpha$ is a type 
+			variable. \texttt{list bool} is the 
+			type of lists of Booleans. \texttt{cons} 
+			is the list constructor of type 
+			$\alpha \to \texttt{list }\alpha \to 
+			\texttt{list }\alpha$ and $[\ ]$ is 
+			the list constructor for empty lists. 
+			For example, the integer list 
+			containing $1$, $2$, and $3$ (in that 
+			order)is represented as 
+			$\texttt{cons }1\ (\texttt{cons }2
+			\ (\texttt{cons }3\ [\ ]))$.
+			\texttt{hd} is a $\texttt{list}\ 
+			\alpha \to \alpha$ function that 
+			returns the first element of a list 
+			and \texttt{apphd} is an $(\alpha
+			\to \beta) \to \texttt{list}\
+			\alpha \to \beta$ function that
+			takes a function $f$ and a list 
+			$l$ as input, and applies $f$
+			to the head of $l$ (or, $f\ 
+			(\texttt{hd }l)$).
 		\item The idea of an instance is 
 			extended to terms as follows. If 
 			$t^M$ is a monomorphic term, then 
 			$\sigma(t^S)$ is an instance of 
 			$t^S$ w.r.t. $t^M$, if 
 			$\sigma$, the combination of all 
-			substitutions induced by constants 
-			in $t^M$ is defined. This instance 
-			can still be schematic. For example, 
-			since $x^{\texttt{bool}}$ is an 
-			instance of $x^{\alpha}$ w.r.t.
+			substitutions induced by the 
+			constants in $t^M$ is defined. This 
+			instance can still be schematic. For 
+			example, since $x^{\texttt{bool}}$ is 
+			an instance of $x^{\alpha}$ w.r.t.
 			$\texttt{T}^{\texttt{bool}}$, 
 			and $xs^{\texttt{list bool}}$ is 
 			an instance of 
@@ -972,7 +1006,7 @@ Inductive lit : Type :=
 			Finding the finite subset of 
 			necessary monomorphic terms is 
 			undecidable~\cite{10.1007/978-3-642-24364-6_7},
-			but \cite{bohme} use heuristic
+			but Bohme et al. use heuristic
 			methods to overapproximate
 			this set. They limit the 
 			number of monomorphization 
@@ -1021,7 +1055,7 @@ Inductive lit : Type :=
 			done smartly, and sometimes
 			repeated multiple times to 
 			be successful. 
-		\end{itemize}
+		\end{itemize} 
 	
 	\subsubsection{Lambda-Lifting}
 		$\lambda$-abstractions represent 
@@ -1053,7 +1087,15 @@ Inductive lit : Type :=
 		5 = 6$
 		is translated to $(c\ 5 = 6) \land
 		(\forall x^{\texttt{int}}.\ 
-		c\ x = x + 1)$.
+		c\ x = x + 1)$. $\lambda-$lifting
+		faithfully preserves the 
+		semantics of the function, and 
+		thus it maintains soundness. 
+		Quantified formulas are usually a 
+		source of undecidability for SMT 
+		solvers, so these lifted formulas 
+		contribute to the incompleteness
+		of the translation.
 		%If the 
 		%$\lambda-$ abstraction contains free
 		%variables, then they are turned 
@@ -1110,10 +1152,12 @@ Inductive lit : Type :=
 		($f$ in the above example) and 
 		\texttt{app} have to be encoded 
 		in the SMT solver as constructors.
-		This can also be done, for example, 
-		with arrays which are essentially 
-		functional types which can be passed
-		around, since arrays in SMTLIB 
+		This can also be done using arrays 
+		which are essentially functional 
+		types which can be passed
+		around, since arrays in 
+		SMTLIB~\cite{BarFT-SMTLIB} (the 
+		standard for SMT solvers)
 		can have any index and value types, 
 		and map elements of the index type 
 		to the value type. Bohme et al. 
@@ -1136,9 +1180,9 @@ Inductive lit : Type :=
 			\llbracket t [\land\ x] 
 			\rrbracket &\cong \llbracket 
 			 t[\lambda y.\ \land\ x\ y]
-			\rrbracket\\
+			\rrbracket&(\eta-expansion)\\
 			&\cong t[c]  \land (\forall y.\ 
-			c\ y = \land\ x\ y)
+			c\ y = \land\ x\ y) &(\lambda-lifting)
 		\end{align*}
 		
 	\subsubsection{Erasure of Compound Types}
@@ -1184,7 +1228,7 @@ Inductive lit : Type :=
 		correspond to these in the translation, 
 		so when a formula containing 
 		integers is sent to the SMT solver, 
-		it can perform its own reasoning. 
+		it can perform integer reasoning. 
 		However, SMT solvers have no 
 		axiomatization of lists of, say, 
 		Booleans. It is crucial that when 
@@ -1194,8 +1238,30 @@ Inductive lit : Type :=
 		selects the right lemmas about 
 		Boolean lists to give to the 
 		SMT solver so it can reason 
-		about them.
-		 
+		about them. So in this step, 
+		completeness depends heavily on 
+		premise selection.
+		
+	\subsubsection{Interpreted and Uninterpreted Constants}
+		As mentioned in the previous section,
+		certain types in Isabelle/HOL correspond
+		to certian sorts in the SMTLIB standard.
+		Bohme et al. exploit the axiomatizations 
+		of these sorts by translating constants 
+		of these types in HOL to the corresponding 
+		MSFOL constants - these include linear
+		arithmetic constants over integers and 
+		reals and bit-vector arithmetic. They 
+		even use the SMTLIB theory of algebraic 
+		datatypes~\cite{BarST-PDPAR-06} to 
+		encode inductive types from Isabelle/HOL
+		such as lists. This allows the SMT solver
+		to rely on the decision procedures for 
+		these theories and not just the premises
+		provided by Sledgehammer, to prove the 
+		conjecture. The rest of the constants are 
+		translated as uninterpreted constants.
+		
 \bibliographystyle{abbrv}
 \bibliography{bib2}
 
