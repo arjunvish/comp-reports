@@ -39,19 +39,20 @@
 	theorem provers (ITPs) - 
 	SMTCoq~\cite{DBLP:phd/hal/Keller13} 
 	and Sledgehammer's SMT solver 
-	integration~\cite{bohme}. Specifically, 
-	we will look at the following aspects 
-	of each tool. For SMTCoq, we will study 
+	integration by Bohme et al.~\cite{bohme}. 
+	Specifically, we will look at the 
+	following aspects of each tool. For 
+	SMTCoq, we will study 
 	how proof by reflection is used to 
 	\textit{reflect} proofs from an SMT 
 	solver to Coq's logic, and the data 
 	structures used to facilitate this 
 	reflection.	Sledgehammer provides a 
-	translation of a fragment of 
-	higher-order logic into first-order 
-	logic, so that SMT-solvers can reason 
-	about them. We will look into this 
-	translation in detail.
+	translation from higher-order logic 
+	(HOL) to first-order logic, so that 
+	SMT-solvers can be used on HOL problems. 
+	We will look at this translation 
+	in detail.
 
 \section{SMTCoq}
 \label{sec:smtcoq}
@@ -82,8 +83,9 @@
 	\texttt{Prop} is the type of 
 	constructive propositions in Coq. 
 	Additionally, Coq also has a 
-	Boolean type, \texttt{bool}, which 
-	is computational --- it is an 
+	classical Boolean type, 
+	\texttt{bool}, which is 
+	computational --- it is an 
 	inductive type with constructors 
 	\texttt{true} and \texttt{false}. 
 	As a consequence, one can 
@@ -132,7 +134,7 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
  	on. SMTCoq uses computational 
  	reflection to prove Boolean 
  	formulas (like \texttt{TOrABool})
- 	in Coq using an external 
+ 	in Coq using external, 
 	proof-producing SMT solvers. 
 	Orthogonal to reflection, 
 	SMTCoq has a \texttt{Prop} to 
@@ -181,8 +183,8 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	proof search. However, ATPs are 
 	typically used to provide automatic 
 	proofs without justification - 
-	answering the question `is F 
-	provable?' with	yes/no. To use the 
+	answering the question `does F 
+	hold?' with	yes/no. To use the 
 	result of an SMT solver without 
 	compromising Coq's kernel the ATP 
 	would have to produce, in addition 
@@ -214,8 +216,13 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	embedding} of SMT terms within 
 	Coq and SMTCoq is used to prove 
 	Coq propositions over such 
-	shallow terms. Since SMT solver 
-	proofs are pretty large, a much 
+	shallow terms. For example, the 
+	Coq library for integers or 
+	the $\mathbb{Z}$ type~\cite{CoqZ},
+	and the one for Booleans or the 
+	\texttt{bool} type~\cite{CoqBool}.
+	Since SMT solver proofs are pretty 
+	large, a much 
 	more efficient embedding is 
 	implemented as data structures 
 	using machine integers and arrays 
@@ -238,8 +245,9 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	process requires an 
 	\textit{interpretation function}
 	which defines the meaning of 
-	data structures in terms of 
-	the library types. Additionally, 
+	the data structures (deep embedding)
+	in terms of the library types
+	(shallow embedding). Additionally, 
 	the \textit{reflection principle} 
 	is a powerful lemma that relates 
 	all formulas in the deep embedding
@@ -341,8 +349,9 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	The actual embedding uses Coq's 
 	machine integers to implement 
 	sharing of terms and optimize 
-	space, but an unoptimized version 
-	is presented below for brevity. 
+	space, but an unoptimized and 
+	simpler version is presented 
+	below. 
 	
 	\texttt{form}, the type of 
 	formulas, looks like this:
@@ -364,7 +373,7 @@ Inductive form : Type :=
 	a conjunction, disjunction, or 
 	implication of two or more 
 	formulas; an exclusive-or or
-	equivalence of two formulas; 
+	an equivalence of two formulas; 
 	an if-then-else of three formulas, 
 	or a double negation of a formula.
 	
@@ -444,15 +453,19 @@ Inductive lit : Type :=
 	if and only if its negation 
 	is unsatisfiable. 
 	
-	The checker is \textit{sound} : 
+	The checker is \textit{sound} ---
 	when it returns \texttt{true} for 
-	a particular state, the formulas 
-	in the state are unsatisfiable, but 
-	not \textit{complete}: when it 
-	returns \texttt{false} we can't be 
-	certain that the formulas in the 
-	state are satisfiable. This is 
-	because the SMT solver isn't 
+	the negation of a particular state, 
+	this negation is unsatisfiable, and
+	the conjunction of formulas in the 
+	state are valid --- but 
+	not \textit{complete} --- when it 
+	returns \texttt{false}, we can't be 
+	certain that the negation is 
+	satisfiable or that the conjunction 
+	of formulas in the state are not 
+	valid. This is because the SMT 
+	solver isn't 
 	decidable --- given a set of 
 	formulas, it could either 
 	return \texttt{sat} (satisfiable), 
@@ -462,7 +475,7 @@ Inductive lit : Type :=
 	checker is also composed of the 
 	proofs of correctness of the small 
 	checkers, and these proofs involve 
-	inductions over the structures of 
+	induction over the structures of 
 	the different types presented 
 	above. 
 
