@@ -581,8 +581,8 @@ Inductive lit : Type :=
 	and integers --- \texttt{int}.
 	Terms are typed variables, 
 	typed constants, applications 
-	of terms to terms, or a typed
-	$\lambda-$ abstraction. We have
+	of terms to terms, or typed
+	$\lambda-$ abstractions. We have
 	the usual Boolean constants 
 	representing logical connectives
 	and quantifiers. For instance, 
@@ -594,7 +594,7 @@ Inductive lit : Type :=
 	\texttt{bool} \to \texttt{bool}}$, 
 	and polymorphic equality,
 	$=^{\alpha \to \alpha 
-	\to \texttt{bool}}$ Type 
+	\to \texttt{bool}}$. Type 
 	annotations for terms are also 
 	often omitted when understood
 	from context.
@@ -628,7 +628,7 @@ Inductive lit : Type :=
 		\phi_1 \land \phi_2\ |\ \forall 
 		x^{\sigma} . \phi\ |\ | t_1 = t_2
 		\ |\ P^{\sigma_1,...,\sigma_m}
-		(t_1, ..., t_n)
+		(t_1, ..., t_m)
 	\end{align*}
 	Terms are either sorted variables, 
 	or applications of functions to terms.
@@ -753,7 +753,8 @@ Inductive lit : Type :=
 		\item Type variables $\alpha$
 		and \textit{compount types} ---
 		application type constructors
-		$\kappa^n$ with $n > 0$.
+		$\kappa^n$ with $n > 0$ to 
+		types.
 		\item $\lambda$-abstractions 
 		such as $\lambda x. t$.
 		\item Variables of functional 
@@ -853,6 +854,9 @@ Inductive lit : Type :=
 			has turned all occurrences of $f$ 
 			in the term from $f^{\alpha \to \beta}$ 
 			to $f^{\texttt{bool} \to \kappa}$.
+			The following presents some inline, 
+			technical preliminaries about 
+			the rest of the terms.
 			\texttt{list $\alpha$} is a compound,
 			polymorphic type of a list of 
 			$\alpha$'s where $\alpha$ is a type 
@@ -987,7 +991,7 @@ Inductive lit : Type :=
 		limitations of this process:
 		\begin{itemize}
 		\item There have to be monomorphized 
-			term in a formula, to guide the 
+			terms in a formula, to guide the 
 			monomorphization process, so it 
 			seems like this process would 
 			fail with formulas that contain 
@@ -1115,9 +1119,10 @@ Inductive lit : Type :=
 		%into additional arguments to $c$.
 		
 	\subsubsection{Explicit Applications}
-		For functional constants occurring 
-		with a variable number of arguments, 
-		\cite{bohme}, the minimal 
+		For functional constants 
+		occurring multiple times with 
+		a variable number 
+		of arguments, the minimal 
 		number of arguments are 
 		considered as the arity of the 
 		function, and any additional 
@@ -1204,7 +1209,7 @@ Inductive lit : Type :=
 		$\tau_i$. After monomorphization, 
 		each $\tau_i$ is monomorphic, so 
 		$\kappa^n\ \tau_1\ ...\ \tau_n$ 
-		is a monomorphic compound type. It
+		is a monomorphic, compound type. It
 		is represented as a fresh nullary 
 		type constructor $\kappa_0^n$ with 
 		the same interpretation as 
@@ -1243,8 +1248,8 @@ Inductive lit : Type :=
 		integers is sent to the SMT solver, 
 		it can perform integer reasoning. 
 		However, SMT solvers have no 
-		axiomatization of lists of, say, 
-		Booleans. It is crucial that when 
+		axiomatization of, say, lists 
+		of Booleans. It is crucial that when 
 		\texttt{list bool} is 
 		translated to $\kappa_2$, the 
 		premise selector of sledgehammer
@@ -1261,11 +1266,12 @@ Inductive lit : Type :=
 		to certian sorts in the SMTLIB standard.
 		Bohme et al. exploit the axiomatizations 
 		of these sorts by translating constants 
-		of these types in HOL to the corresponding 
-		MSFOL constants - these include linear
-		arithmetic constants over integers and 
-		reals and bit-vector arithmetic. They 
-		even use the SMTLIB theory of algebraic 
+		of these types from HOL to the 
+		corresponding MSFOL constants - these 
+		include linear arithmetic constants over 
+		integers and reals and bit-vector 
+		arithmetic. They even use the SMTLIB 
+		theory of algebraic 
 		datatypes~\cite{BarST-PDPAR-06} to 
 		encode inductive types from Isabelle/HOL
 		such as lists. This allows the SMT solver
@@ -1286,7 +1292,7 @@ Inductive lit : Type :=
 		about an uninterpreted constant, the SMT 
 		solver will not be able to prove it.
 		Even with interpreted constants, if the 
-		constants belong ot an undecidable theory,
+		constants belong to an undecidable theory,
 		the SMT solver will not necessarily be 
 		able to prove it.
 		
