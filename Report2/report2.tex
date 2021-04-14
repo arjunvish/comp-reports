@@ -8,6 +8,7 @@
 \usepackage{mathtools}
 \usepackage{minted}
 \usepackage{stmaryrd}
+\usepackage{verbatim}
 
 \usepackage{hyperref}
 \hypersetup{
@@ -49,10 +50,10 @@
 	structures used to facilitate this 
 	reflection.	Sledgehammer provides a 
 	translation from higher-order logic 
-	(HOL) to first-order logic, so that 
-	SMT-solvers can be used on HOL problems. 
-	We will look at this translation 
-	in detail.
+	(HOL) to many-sorted first-order logic 
+	(MSFOL), so that SMT-solvers can be 
+	used on HOL problems. We will look at 
+	this translation in detail.
 
 \section{SMTCoq}
 \label{sec:smtcoq}
@@ -66,7 +67,7 @@
 	
 	ATPs like SMT solvers are susceptible 
 	to bugs due to the large code-bases 
-	used to support	their automaticity. 
+	used to support	their automation. 
 	ITPs like Coq have a small trustable 
 	proof kernel which would be 
 	compromised if they were to trust
@@ -94,103 +95,150 @@
 	are decidable. Propositions 
 	aren't decidable - one cannot 
 	observe whether any given 
-	proposition is true or false. 
-	Boolean formulas are embedded 
-	into \texttt{Prop}s since all 
-	theorems in Coq are stated as 
-	propositions. For instance, the 
-	formula 
-	$\top \lor a$ for some 
-	proposition $a$ can be stated 
-	using Coq's \texttt{Prop} type as:
+	proposition is true or false. 	
+	Using the \texttt{bool} type, a 
+	first-order formula can be 
+	expressed in Coq as a \texttt{bool}
+	term. For example, for Booleans 
+	\texttt{a} and \texttt{b}, 
+	\texttt{implb a (a || b)} 
+	expresses the first-order formula 
+	$a \to a \lor b$, where the logical 
+	implication and logical disjunction 
+	symbols are \texttt{implb} and 
+	\texttt{||} for Coq Booleans, and 
+	those for first-order logic are 
+	$\to$ and $\lor$, respectively. The 
+	fact that a Boolean formula in Coq 
+	holds is expressed by equating it to 
+	true.
 \begin{minted}{Coq}
-Lemma TOrA : forall (a : Prop), True \/ a.
+Lemma BoolForm : forall (a b : bool), implb a (a || b) = true.
 \end{minted}
-	Using the \texttt{bool} type, it 
-	is stated as:
+	Note that this is a classical formula 
+	in Coq expressed using the Boolean type. 
+	Using Coq's constructive proposition type,
+	the same formula is expressed as follows.
 \begin{minted}{Coq}
-Lemma TOrABool : forall (a : bool), orb true a = true.
+Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 \end{minted}
- 	All quantified formulas have type
- 	\texttt{Prop}, so the type of both
- 	\texttt{TOrA} and \texttt{TOrABool}
- 	is \texttt{Prop}. 
- 	\texttt{True $\backslash/$ a}
- 	is also a Coq proposition, since 
- 	the propositional disjunction
- 	(\texttt{$\backslash/$}), returns a 
- 	\texttt{Prop}. Moreover, the 
- 	formula \texttt{orb true a = true}, 
- 	where \texttt{orb} is the 
- 	Boolean disjunction in Coq, 
- 	is also a proposition since 
- 	equality is a predicate 
- 	(a function with return 
- 	type \texttt{Prop}), but in 
- 	\texttt{TOrABool}, $\top \lor a$ 
- 	is expressed using Coq's 
- 	\texttt{bool} type, and the 
- 	Boolean $a$ can be pattern-matched 
- 	on. SMTCoq uses computational 
- 	reflection to prove Boolean 
- 	formulas (like \texttt{TOrABool})
- 	in Coq using external, 
-	proof-producing SMT solvers. 
-	Orthogonal to reflection, 
-	SMTCoq has a \texttt{Prop} to 
-	\texttt{bool} conversion 
-	mechanism, that is able to take 
-	certain \texttt{Prop}
-	goals (that look like 
-	\texttt{TOrA}), and convert 
-	them to \texttt{bool} formulas, 
-	which can then be proved by 
-	an SMT solver. The focus in 
-	this report, however,  
-	is on SMTCoq's reflection 
-	mechanism.
+	where \texttt{->} and $\backslash/$ are 
+	Coq's propositional implication and 
+	disjunction. SMTCoq proves formulas 
+	in Coq that have Boolean type, and 
+	not formulas over Coq propositions.
 	 
+	The process of computational 
+	reflection relies heavily on 
+	Coq's \textit{conversion rule}.
 	Coq's Calculus of Inductive 
 	Constructions (CIC) is a 
 	$\lambda-$calculus that has a 
 	reduction mechanism for terms. The
 	reduction rules form a strongly 
 	normalizing system. The calculus's
-	\textit{conversion rule} is an 
-	important rule that allows different 
-	terms to have the same type as 
-	long as the types have the same 
-	normal forms. For instance, for some 
-	predicate $P$ over natural numbers, 
-	a proof of $P(10)$ is also a proof 
-	of $P(5*2)$, and of $P(20-10)$. Due 
-	to the conversion rule, computations 
-	can be used in Coq's reasoning and 
-	proof terms can be found simply by 
-	computing normal forms of types.
+	conversion rule is an 
+	important rule that allows a term to 
+	have multiple types, as long as the 
+	types have the same normal forms. For 
+	instance, for some predicate $P$ 
+	over natural numbers, a term that 
+	has type $P(10)$ also has type 
+	$P(5*2)$ and $P(20-10)$. Due 
+	to the conversion rule, 
+	computations can be used in Coq's 
+	reasoning and proof terms can be 
+	found simply by computing normal 
+	forms of types.
+	
+	\begin{comment}
+	The 
+	conversion rule includes more 
+	complicated reductions of 
+	types that include $\beta$-reductions,
+	$\alpha-$conversions (that perform
+	variable renaming), 
+	$\zeta-$conversions (of local 
+	\texttt{let} definitions), and 
+	$\eta-$conversion of terms with a 
+	functional type. These are explained 
+	using the following example: the type 
+	of the term 
+	\begin{center}
+		\texttt{(fun (x : Type $\to$ Type) 
+		$\implies$ x) (fun (z : Type) 
+		$\implies$ let a := z in a)}  
+	\end{center}
+	is the same as the type of the term 
+	\begin{center}
+		\texttt{fun (y : Type) $\implies$ y}.
+	\end{center}
+	In other words, the two terms are 
+	convertible to each other. 
+	\texttt{Type} is part of Coq's
+	type hierarchy, and an instance of 
+	\texttt{Type} is a set of terms 
+	(or a type at the bottom of the 
+	hierarchy) such as \texttt{nat},
+	the type of natural numbers (to be 
+	precise, \texttt{Set} is the 
+	type of \texttt{nat} and 
+	\texttt{Type} is the type of 
+	\texttt{Set}, but this simplification
+	still makes the point). The syntax
+	\texttt{fun (x : $\alpha$) $\implies$
+	y} represents a $\lambda$-abstraction 
+	$\lambda(x : \alpha).y$. The 
+	type conversion takes place as follows.
+	The term
+	\begin{center}
+		\texttt{(fun (x : Type $\to$ Type) 
+			$\implies$ x) (fun (z : Type) 
+			$\implies$ let a := z in a)}  
+	\end{center}
+	reduces to
+	\begin{center}
+	\texttt{(fun (x : Type $\to$ Type) 
+		$\implies$ x) (fun (z : Type) 
+		$\implies$ z)}	
+	\end{center}
+	by $\zeta-$reduction of the \texttt{let}
+	expression. $\beta-$reducing this 
+	term, gives 
+	\begin{center}
+		\texttt{fun (z : Type) 
+			$\implies$ z}	
+	\end{center}	 
+	which is $\alpha-$convertible to 
+	\begin{center}
+		\texttt{fun (y : Type) $\implies$ y}.
+	\end{center}
+	by renaming the $z$ to $y$.
+	\end{comment}
 	
 	A proposition in Coq is proved by 
 	providing to Coq's type checker, a 
 	proof term that inhabits the 
-	proposition, or has the proposition 
-	as its type. Automaticity can be 
+	proposition; in other words, a 
+	proof term that has the proposition 
+	as its type. Automation can be 
 	added to Coq by implementing 
 	methods in Coq, that find the right 
 	proof term for propositions --- a 
 	process called \textit{proof search}. 
 	Such a method could use an external 
 	solver, such as an ATP, to guide 
-	proof search. However, ATPs are 
-	typically used to provide automatic 
+	proof search. However, ATPs 
+	typically provide automatic 
 	proofs without justification - 
-	answering the question `does F 
+	by answering the question `does F 
 	hold?' with	yes/no. To use the 
 	result of an SMT solver without 
 	compromising Coq's kernel the ATP 
 	would have to produce, in addition 
-	to a result, a \textit{proof trace} 
+	to a result, a proof object
 	that justifies the result. This 
-	trace will guide the proof search 
+	proof object will guide the proof search 
 	in Coq in a process called 
 	\textit{proof reconstruction}. 
 	Reconstruction can be implemented 
@@ -205,31 +253,52 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	which relies on the previously 
 	mentioned reduction mechanism and 
 	the conversion rule.
+	
+	Given a logical framework A, and 
+	a logical framework B, in which we 
+	want to represent the language of A, 
+	there are two ways to achieve this
+	representation, and 
+	both of these are necessary for 
+	reflection:
+	\begin{itemize}
+		\item \textit{Shallow Embedding: }
+		Use types and terms in B that 
+		correspond to those of A, to 
+		represent terms of A.
+		\item\textit{Deep Embedding: }
+		Define custom types in B that 
+		correspond to those of A, and 
+		define inside B, the meaning of 
+		these custom types with respect
+		to the shallow types.
+	\end{itemize}
 
 	SMT solvers prove formulas over 
 	sorted (typed) terms and these 
 	sorts correspond to types in 
-	Coq that are generally 
-	specified by the Coq standard 
-	library. Terms of these library 
-	types represent a \textit{shallow 
-	embedding} of SMT terms within 
-	Coq and SMTCoq is used to prove 
-	Coq propositions over such 
-	shallow terms. For example, the 
+	Coq that are specified in the 
+	Coq standard library. Terms of 
+	these library types represent a 
+	shallow embedding of SMT 
+	terms within Coq and SMTCoq is used 
+	to prove Coq propositions over such 
+	shallow terms. Examples are the 
 	Coq library for integers or 
 	the $\mathbb{Z}$ type~\cite{CoqZ},
 	and the one for Booleans or the 
 	\texttt{bool} type~\cite{CoqBool}.
-	Since SMT solver proofs are pretty 
-	large, a much 
-	more efficient embedding is 
-	implemented as data structures 
-	using machine integers and arrays 
-	in Coq. This is the 
-	\textit{deep embedding}. Deep 
-	terms are harder to specify, 
-	since features such as binders 
+	The deep embedding of SMT terms 
+	in Coq uses Coq's inductive types,
+	machine integers and arrays. In 
+	addition to the other benefits 
+	of reflection mentioned below,
+	the choice of machine integers 
+	and arrays contribute to 
+	efficient storage of large 
+	SMT proofs. Deep terms are harder 
+	to specify, since features such as 
+	binders 
 	and variable substitution must be 
 	handled by writing functions 
 	for these within Coq. These 
@@ -240,13 +309,14 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	A proof produced by an 
 	ATP is checked against the deep 
 	embedding and is
-	\textit{reflected} to a proof 
+	reflected to a proof 
 	in the shallow embedding. This 
 	process requires an 
 	\textit{interpretation function}
 	which defines the meaning of 
-	the data structures (deep embedding)
-	in terms of the library types
+	the custom data structures 
+	(deep embedding)
+	in terms of the Coq library types
 	(shallow embedding). Additionally, 
 	the \textit{reflection principle} 
 	is a powerful lemma that relates 
@@ -254,17 +324,17 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 	to those in the shallow embedding. 
 	The proof involves an induction 
 	on the structure of the 
-	data structures in order to prove 
-	their similarity to 
-	the shallow terms, while using 
-	the interpretation function. This 
+	inductive types (deep types) in 
+	order to prove their similarity to 
+	the shallow terms, using the 
+	interpretation function. This 
 	proof is factored once and can be 
 	reused by instantiating it with 
 	specific formulas proved by the 
 	external solvers. Work is then 
 	done by Coq's computational 
 	mechanism to check that the proof 
-	trace from the SMT solver proves 
+	object from the SMT solver proves 
 	the (deep) formula it claims to 
 	prove. Deep and shallow 
 	embeddings were first introduced 
@@ -291,7 +361,7 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 		\texttt{form} $\to$ 
 		\texttt{bool})
 		\item \texttt{T} --- the type of 
-		proof traces
+		proof objects
 	\end{itemize}
 	Reflection requires the following:
 	\begin{itemize}
@@ -299,29 +369,29 @@ Lemma TOrABool : forall (a : bool), orb true a = true.
 		\texttt{check : form $\to$ T $\to$ 
 		bool} implemented in Coq such that 
 		\texttt{check}$\ f\ t$ is 
-		\texttt{true} if trace $t$
-		justifies $f$,
-		where $f$ has type 
-		\texttt{form}
+		\texttt{true} if proof object $t$
+		justifies $f$
 		\item a lemma that proves the 
 		correctness of \texttt{check}:
 		\begin{align*}
 			\texttt{check\_correct :} 
 			\forall\ (f : \texttt{form})\ 
-			(t : \texttt{trace}),\ 
+			(t : \texttt{T})\ 
+			(\mathbb{I} : \texttt{interp}),\ 
 			\texttt{check}\ f\ t\ = 
 			\texttt{true} \to \\
 			\mathbb{I}(f) = 
 			\texttt{true}
 		\end{align*}
-		This is called the 
-		\textit{reflection principle}.
+		This is called the reflection 
+		principle.
 	\end{itemize}
 	The reflection principle relates 
 	the computational behavior of 
 	\texttt{check} to its meaning
 	in the shallow embedding. For some 
-	$f : \texttt{form}$ and trace $t$, 
+	formula $f$, proof $t$, and
+	interpretation $\mathbb{I}$,
 	the proof of $\mathbb{I}(f) = 
 	\texttt{true}$ is:
 	\begin{center}
@@ -360,124 +430,122 @@ Inductive form : Type :=
 	| Fatom (_ : atom)
 	| Ftrue
 	| Ffalse
+	| Fnot (_ : form)
 	| Fand (_ : array form)
 	| For (_ : array form)
 	| Fimp (_ : array form)
 	| Fxor (_ _ : form)
 	| Fiff (_ _ : form)
 	| Fite (_ _ _ : form)
-	| Fnot2 (_ : form)
 	\end{minted}
 	where a formula can be an atom, 
 	\texttt{true}, \texttt{false};
-	a conjunction, disjunction, or 
+	a negation of a formula; a 
+	conjunction, disjunction, or 
 	implication of two or more 
 	formulas; an exclusive-or or
 	an equivalence of two formulas; 
-	an if-then-else of three formulas, 
-	or a double negation of a formula.
+	or an if-then-else of three formulas.
+	\texttt{atom} is the type of atoms, 
+	which can be variables, 
+	constants, or applications of 
+	functions belonging to 
+	different theories.
 	
-	Formulas or their negations 
-	represent literals:
-	\begin{minted}{coq}
-Inductive lit : Type :=
-	| Pos (_ : form)
-	| Neg (_ : form)
-	\end{minted}
-	A clause is a list of literals,
-	and a state is a set of clauses.
-	The \texttt{form} type references 
-	\texttt{atom}, the type of atoms, 
-	which represents variables, 
-	constants, and applications of 
-	functions of different theories.
-	
-	\noindent The \texttt{check} 
-	function is implemented as the 
-	\textit{main checker}: 
+	\noindent In keeping with the terminology
+	in~\cite{DBLP:phd/hal/Keller13}, an 
+	implementation of the \texttt{check} 
+	function from the previous section
+	is called a \textit{checker}. SMTCoq 
+	splits the checker into multiple 
+	\textit{small checkers}, and the 
+	\textit{main checker} implements the 
+	actual \texttt{check} function, by 
+	composing the checking done by the 
+	small checkers. The main checker
+	has the following type.
 	\begin{center}
 		\texttt{main\_checker ($input$ : 
-			state) ($trace$ : T) : bool}	
+			form) ($proof$ : T) : bool}	
 	\end{center}
-	which is a function that checks 
+	It checks 
 	whether the deep embedding $input$
-	corresponds to the proof 
-	$trace$ from the SMT solver, 
+	corresponds to the proof object
+	$proof$ from the SMT solver, 
 	and returns \texttt{true} if it 
-	does. The main checker splits up 
-	the checking among a number of 
-	\textit{small checkers}. The 
-	trace is an array of \textit{steps}, 
-	and each step can be independently 
-	checked by a small checker. Currently, 
-	there are small checkers for steps 
-	that perform clause resolution, 
-	conversion of formulas to conjunction 
-	normal form (CNF), SMT solver 
-	simplifications, and one for each 
-	theory:	equality over uninterpreted 
-	functions (EUF), linear integer 
-	arithmetic (LIA), bit-vectors (BV), 
-	and functional arrays with 
-	extensionality (AX). The small
-	checkers add inferred clauses to 
-	the state via their respective 
-	steps, and the main checker 
-	checks that eventually, the empty 
-	clause is added to the state, 
-	signifying unsatisfiability. The 
-	reflection principle is a proof of 
+	does. Specifically, \texttt{main\_checker}
+	checks whether $proof$ is a proof of 
+	the unsatisfiability of the negation 
+	of $input$, i.e., $\neg input$. This is 
+	equivalent to a proof of validity of 
+	$input$. The checking of unsatisfiability 
+	is divided into multiple \textit{steps}
+	and each step is independently checked 
+	by a small checker. Currently, there are 
+	small checkers for steps that perform 
+	resolution, conversion of formulas to 
+	conjunction normal form (CNF), SMT 
+	solver simplifications, and one for 
+	each theory: equality over 
+	uninterpreted functions (EUF), linear 
+	integer arithmetic (LIA), bit-vectors 
+	(BV), and functional arrays with 
+	extensionality (AX). Each small
+	checker simplifies the input 
+	\texttt{form} via the step it performs,
+	and the main checker ultimately checks
+	that the input is finally transformed to 
+	$\bot$ or \texttt{False} which is the 
+	simplest unsatisfiable formula.
+	The reflection principle is a proof of 
 	correctness of the main checker:
 	\begin{align*}
 		\texttt{main\_checker\_correct
-		: } &\texttt{$\forall$ $input$ 
-		$trace$, main\_checker $input$ 
-		$trace$ = true}\\
+		: } &\texttt{$\forall$ 
+		$input$ $proof$, 
+		main\_checker $input$ 
+		$proof$ = true}\\
 		&\texttt{$\to$ $\forall$ 
 		$\mathbb{I}$,
-		valid $\mathbb{I}$
+		unsat $\mathbb{I}$
 		$\neg input$ = true}
 	\end{align*}
 	where $\mathbb{I}$ is the 
 	interpretation function that 
 	relates the deep formula to its 
 	corresponding shallow embedding,
-	and \texttt{valid} is a function 
-	that specifies the correctness
-	of formulas in the shallow 
-	embedding. The state is 
-	negated in \texttt{valid} because 
-	of the duality between 
-	satisfiability and validity. A
-	quantifier-free formula is valid, 
-	if and only if its negation 
-	is unsatisfiable. 
+	and \texttt{(unsat $\mathbb{I}$ $f$)} 
+	returns \texttt{true} if 
+	$\mathbb{I}(f)$ is unsatisfiable. 
+	Thus, \texttt{unsat} specifies 
+	the validity of $input$ 
+	(or the unsatisfiability of its 
+	negation) in the shallow 
+	embedding. Since each small
+	checker modifies $input$, 
+	there is a similar correctness 
+	proof for each small checker 
+	that guarantees that they don't
+	change the unsatisfiability of 
+	$input$ during this process, and 
+	\texttt{main\_checker\_correct}
+	is composed of the correctness
+	proofs of the small checkers.
 	
 	The checker is \textit{sound} ---
 	when it returns \texttt{true} for 
-	the negation of a particular state, 
-	this negation is unsatisfiable, and
-	the conjunction of formulas in the 
-	state are valid --- but 
+	a formula, it is valid and its 
+	negation is unsatisfiable --- but 
 	not \textit{complete} --- when it 
 	returns \texttt{false}, we can't be 
-	certain that the negation is 
-	satisfiable or that the conjunction 
-	of formulas in the state are not 
-	valid. This is because the SMT 
-	solver isn't 
-	decidable --- given a set of 
-	formulas, it could either 
-	return \texttt{sat} (satisfiable), 
-	\texttt{unsat} (unsatisfiable), or 
+	certain that the formula isn't valid
+	or that its negation is satisfiable.
+	This is because the SMT solver isn't 
+	decidable --- given a formula, it 
+	could either return \texttt{sat} 
+	(satisfiable), \texttt{unsat} 
+	(unsatisfiable), or 
 	\texttt{unknown} (`don't know').
-	The proof of correctness of the main 
-	checker is also composed of the 
-	proofs of correctness of the small 
-	checkers, and these proofs involve 
-	induction over the structures of 
-	the different types presented 
-	above. 
 
 	
 \section{Sledgehammer}
@@ -507,12 +575,12 @@ Inductive lit : Type :=
 	rest of this section. As with 
 	SMTCoq, the SMT solvers integrated
 	with Sledgehammer produce a 
-	\textit{proof trace} which is 
-	then \textit{reconstructed} within
+	proof object which is 
+	then reconstructed within
 	Isabelle/HOL by Sledgehammer, 
 	using Sledgehammer's own internal 
 	ATP --- Metis~\cite{hurd2003d}. The 
-	proof trace essentially guides 
+	proof object essentially guides 
 	the inference steps of the proof 
 	within Isabelle/HOL.
 	
@@ -528,13 +596,11 @@ Inductive lit : Type :=
 	conjecture (i.e., conclude 
 	the unsatisfiability of its 
 	negation), it returns 
-	a proof trace which is 
-	used to guide the proof search 
-	of Metis inside Isabelle/HOL.
-	Since Isabelle/HOL implements 
-	a higher-order logic (HOL), which 
+	a proof. Since Isabelle/HOL 
+	implements a higher-order logic 
+	(HOL), which 
 	is more expressive than 
-	the SMT solver's multi-sorted
+	the SMT solver's many-sorted
 	first order logic (MSFOL),
 	the entirety of the formula
 	$\Gamma \land \neg \Phi$ may not 
@@ -751,8 +817,8 @@ Inductive lit : Type :=
 	include:
 	\begin{itemize}
 		\item Type variables $\alpha$
-		and \textit{compount types} ---
-		application type constructors
+		and \textit{compound types} ---
+		applications of type constructors
 		$\kappa^n$ with $n > 0$ to 
 		types.
 		\item $\lambda$-abstractions 
@@ -810,7 +876,7 @@ Inductive lit : Type :=
 			matches $\alpha$; and $\texttt{bool} 
 			\to \texttt{int}$ matches 
 			$\texttt{bool} \to \beta$
-			only if \texttt{int} matches 
+			since \texttt{int} matches 
 			$\beta$. Finally, for our running 
 			example taken from Bohme et al., 
 			${\texttt{bool} \to \kappa}$
@@ -889,7 +955,7 @@ Inductive lit : Type :=
 			$\sigma$, the combination of all 
 			substitutions induced by the 
 			constants in $t^M$ is defined. This 
-			instance can still be schematic. For 
+			instance might still be schematic. For 
 			example, since $x^{\texttt{bool}}$ is 
 			an instance of $x^{\alpha}$ w.r.t.
 			$\texttt{T}^{\texttt{bool}}$, 
@@ -1228,9 +1294,10 @@ Inductive lit : Type :=
 			\llbracket \texttt{list\ bool}
 			\rrbracket &\cong \kappa_2
 		\end{align*}
-		Many SMT solvers now support sorts 
-		parameterized by other sorts and 
-		algebraic data types which can be 
+		At the time of writing of Bohme et al.,
+		SMT solvers didn't support sorts 
+		parameterized by other sorts, but they 
+		support them now, and these can be 
 		used to encode compound types.
 		
 		While this is a straightforward

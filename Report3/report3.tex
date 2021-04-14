@@ -1,0 +1,1132 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
+\usepackage{minted}
+\usepackage{stmaryrd}
+\usepackage{verbatim}
+
+\usepackage{hyperref}
+\hypersetup{
+ pdfborder={0 0 0},
+ colorlinks=true,
+ linkcolor=blue,
+ urlcolor=blue,
+ citecolor=blue
+}
+\usepackage{cleveref}
+
+
+\newcommand{\rem}[1]{\textcolor{red}{[#1]}}
+\newcommand{\ed}[1]{\textcolor{blue}{#1}}
+\newcommand{\ct}[1]{\rem{#1 --ct}}
+
+\begin{document}
+\title{Comprehensive Exam Report 3 - Proof Generation}
+\author{Arjun Viswanathan}
+\date{}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+	In this report, we will explore
+	two aspects of the integration of 
+	SMT solvers~\cite{Barrett2018} with 
+	Coq via 
+	SMTCoq~\cite{DBLP:phd/hal/Keller13}. 
+	SMT solvers reason in 
+	a classical logic and propositions 
+	in Coq implement a constructive 
+	logic. First, we will see how SMTCoq 
+	reconciles these logics. SMT 
+	solvers implement the DPLL(T) 
+	algorithm and produce resolution 
+	proofs which are then checked in 
+	Coq by SMTCoq. Next, we will look at 
+	DPLL(T) proofs with the help 
+	of an example. 
+	
+\section{Classical Logic in Coq}
+\label{sec:logic}
+	Constructive or intuitionistic logic 
+	is a branch of mathematical logic 
+	studying arguments concerning 
+	constructive objects. A proposition 
+	is provable in constructive logic, if 
+	a (proof) term inhabiting the 
+	proposition can be constructed. 
+	Coq implements a constructive 
+	logic through its \texttt{Prop}
+	type of propositions. In other words,
+	a \texttt{Prop} $P$ can be proved in 
+	Coq only if a proof term having 
+	type $P$ can be constructed.
+	For example, the following Coq
+	code proves the formula
+	$a \to a \lor b$, for any 
+	\texttt{Prop}s $a$ and $b$.
+\begin{minted}{Coq}
+Theorem orIntroL : forall (a b: Prop), a -> a \/ b.
+Proof.
+  intros a b Ha.
+  left. apply Ha.
+Qed.
+\end{minted}
+	The formula asserts that given a 
+	proof of the proposition $a$, we
+	have a proof of the 
+	disjunction of $a$ and $b$. The 
+	\textit{proof script} between 
+	\texttt{Proof} 
+	and \texttt{Qed} constructs a 
+	proof term of type \texttt{forall 
+	(a b: Prop), a -> a $\backslash/$ b}. 
+	Coq presents to the user a \textit{goal}
+	and a \textit{proof 
+	context}, which contains the proof terms
+	available to prove the goal.
+	Initially, the goal is the entire 
+	proposition being proven, and the 
+	context is empty, and the user
+	can manipulate the goal to break 
+	it down and move over some of its 
+	constituents into the context
+	using Coq functions called 
+	\textit{tactics}. The first line of the 
+	script above introduces 
+	the propositions $a$ and $b$ and the 
+	proof $Ha$ of $a$ into the 
+	proof context (using the \texttt{intros}
+	tactic). The only way to prove a 
+	disjunction is to prove one 
+	of the disjuncts. This is a crucial
+	detail that distinguishes constructive
+	logic from classical logic, as we 
+	will see in the next example. 
+	The second line of the proof script 
+	proves the left disjunct by using 
+	the proof of $a$ from the context.
+	
+	Classical logic extends 
+	constructive logic with the 
+	\textit{law of the excluded 
+	middle} that states that for 
+	every proposition $a$, 
+	$a \lor \neg a$ holds. This can 
+	also be stated as the 
+	double negation elimination 
+	law or as proving a 
+	proposition by contradiction. As
+	such, some statements that are true 
+	in classical logic might not have 
+	a proof in constructive logic.
+	The law of the excluded middle
+	itself is a convenient example.
+\begin{minted}{coq}
+Theorem LEMProp : forall (a : Prop), a \/ ~a.
+Proof.
+  intros a. 
+Abort.
+\end{minted}
+	Again, the only way to prove the 
+	disjunction is to prove that one 
+	of the disjuncts holds. However, 
+	we don't any proof terms in our
+	context to work 
+	with here, to construct the 
+	proof of either $a$ or $\neg a$,
+	so we quit out of the proof.
+	
+	SMT solvers are able to prove 
+	such classical formulas and as
+	such, aren't logically compatible
+	with Coq's \texttt{Prop} type. 
+	In addition to the \texttt{Prop} 
+	type, Coq has a Boolean 
+	(\texttt{bool}) type in its standard 
+	library~\cite{CoqBool}, that defines 
+	Booleans as an 
+	inductive type with two nullary
+	constructors \texttt{true} and
+	\texttt{false}. This Boolean type 
+	in Coq implements a classical 
+	logic. Any Boolean value can 
+	be inspected, pattern matched on,
+	and evaluated to either 
+	\texttt{true} or \texttt{false}.
+	Formulas over the type 
+	\texttt{bool} are not theorems
+	in Coq, since they don't have 
+	the \texttt{Prop} type. To 
+	state a Boolean formula in a 
+	Coq proposition, the formula is 
+	equated to \texttt{true}. 
+	For example, the law of 
+	excluded middle for 
+	\texttt{a : bool} is stated as 
+	\begin{center}
+	\texttt{a || (negb a)}
+	\end{center}
+	where \texttt{orb} is the 
+	disjunction operator over 
+	Booleans and has 
+	infix notation \texttt{||},
+	and \texttt{negb} is the 
+	negation operator over 
+	Booleans.
+	This is stated as a Coq theorem 
+	and proved as follows:
+\begin{minted}{coq}
+Theorem LEMBool : forall a : bool, a || (negb a) = true.
+Proof.
+intros a. destruct a.
+  + simpl. reflexivity.
+  + simpl. reflexivity.
+Qed.
+\end{minted}
+	\texttt{destruct a} performs a 
+	case analysis on $a$, and since $a$ 
+	is a Boolean that can 
+	only be either \texttt{true}
+	or \texttt{false}, the two lines
+	beginning with \texttt{+} 
+	replace the $a$ in the context
+	with exactly those values.
+	When $a$ is \texttt{true}, the 
+	goal reduces to 
+	\texttt{true || not true = true}
+	and when it is \texttt{false}, it
+	reduces to 
+	\texttt{false || not false = true}.
+	Both of these are simplified to 
+	\texttt{true = true} using the 
+	tactic \texttt{simpl} and then 
+	by the reflexivity of 
+	\texttt{true}, both equalities
+	are provable. Notice that, 
+	neither a proof of $a$, nor 
+	a proof of $\neg a$ were 
+	constructed here. Arguments were
+	made in terms of every possible 
+	value $a$ could take, and the
+	conjecture was proven in 
+	each case. Such a proof, as we 
+	saw above, is impossible in 
+	constructive logic.
+	
+	Since SMT solvers implement 
+	a classical logic, SMTCoq 
+	uses SMT solver proofs to 
+	prove classical formulas in 
+	Coq over Booleans. The 
+	\texttt{LEMBool} lemma from 
+	above would be a simple goal that 
+	could be dispatched to an SMT 
+	solver using SMTCoq's \texttt{smt}
+	tactic:
+\begin{minted}{coq}
+Theorem LEMBool' : forall a : bool, a || (negb a) = true.
+Proof.
+  smt.
+Qed.
+\end{minted}
+	As described in the previous report, 
+	SMTCoq defines a \texttt{form} type
+	as a \textit{deep embedding} of Boolean 
+	formulas in Coq, and \textit{reflects} 
+	proofs of \texttt{form}s from the SMT 
+	solver to proofs of Boolean formulas, 
+	the shallow embedding of formulas 
+	in Coq. A checker in Coq checks 
+	proofs from the SMT solver against
+	the deep embedding of formulas, and 
+	the reflection principle is a proof
+	of correctness of the checker, that 
+	is used by SMTCoq to prove classical
+	goals in Coq represented using the
+	\texttt{Bool} type.
+	
+
+	\subsection{Theories and Prop Predicates}
+	SMTCoq integrates both 
+	SAT and SMT solvers with Coq. If 
+	it were reasoning about purely 
+	Boolean formulas such as 
+	\texttt{LEMBool} above, it wouldn't 
+	need SMT solvers at all. It could
+	do that with just SAT or
+	propositional satisfiability
+	solvers. SMT or satisfiability
+	modulo theories solvers provide 
+	the ability to reason in theories
+	such as finite- and infinite-precision 
+	integers and arrays. Using its SMT 
+	solver integration, SMTCoq is able to 
+	prove expressive Boolean formulas
+	over the theories of uninterpreted 
+	functions, linear integer arithmetic,
+	arrays, and bit-vectors. Consider 
+	the following examples.
+\begin{minted}{Coq}
+Theorem Z_congBool : forall (a b : Z) (f : Z -> Z), 
+  (Z.eqb a b) = true -> (Z.eqb (f a) (f b) = true).
+Proof.
+  smt.
+Qed.
+
+Theorem BV_ulteZeroBool : forall (b : bitvector 4),
+  bv_ult #b|0|0|0|0| b = true \/ bv_eq b #b|0|0|0|0| = true.
+Proof.
+  smt.
+Qed.
+\end{minted}
+	\texttt{Z\_congBool} proves the 
+	congruence rule over integer 
+	to integer functions and 
+	\texttt{BV\_ulteZeroBool} proves 
+	that all 4-bit integers (bit-vectors 
+	of length 4) in their 
+	unsigned interpretation are 
+	greater than or equal to $0$. 
+	\texttt{Z.eqb} is the Boolean 
+	equality predicate over integers 
+	in Coq, and \texttt{bv\_ult}
+	and \texttt{bv\_eq} are 
+	respectively the Boolean 
+	less than (over unsigned integers)
+	and equality predicate for 
+	machine integers. Since 
+	predicates in these theories 
+	are expressed as Boolean terms, 
+	they need to be equated to 
+	\texttt{true} as shown above to 
+	be well-formed propositions in 
+	Coq. However, for some of these 
+	predicates, SMTCoq is able to 
+	prove their \texttt{Prop} version,
+	in addition to the \texttt{bool}
+	version. In other words, SMTCoq
+	is able to prove certain 
+	non-Boolean propositions in Coq.
+	To do this, it implements a 
+	\texttt{Prop} to \texttt{bool}
+	conversion for these predicates, 
+	so when a user asks SMTCoq to 
+	prove a proposition over one 
+	of these predicates, SMTCoq
+	converts it to a Boolean 
+	predicate, so that it now
+	suffices to prove the formula
+	over the Boolean predicate, 
+	which can be done by an SMT 
+	solver. As it turns out, 
+	the \texttt{Prop} to 
+	\texttt{Bool} conversion has 
+	been implemented for the 
+	predicates used above,
+	so SMTCoq can prove their 
+	corresponding \texttt{Prop}
+	theorems:
+\begin{minted}{Coq}
+Theorem Z_congProp : forall (a b : Z) (f : Z -> Z), a = b -> 
+  f a = f b.
+Proof.
+ smt.
+Qed.
+
+Theorem BV_ulteZeroProp : forall (b : bitvector 4), 
+  bv_ultP #b|0|0|0|0| b \/ b = #b|0|0|0|0|.
+Proof.
+ smt.
+Qed.
+\end{minted}
+	The	\texttt{Prop} to \texttt{Bool} 
+	conversion of SMTCoq consists of 
+	applying proofs of equivalence 
+	between a \texttt{Prop} version
+	of a predicate and its \texttt{Bool}
+	version. For example, SMTCoq's 
+	bitvector library proves the 
+	following lemma of equivalence 
+	between the \texttt{Bool}
+	and \texttt{Prop} version of the 
+	unsigned less than predicate over
+	bit-vectors, which is applied 
+	by SMTCoq's \texttt{Prop} to 
+	\texttt{Bool} conversion when 
+	a user uses the \texttt{Prop}
+	version of this predicate in a 
+	query to SMTCoq, as in 
+	\texttt{BV\_ulteZeroProp}.
+\begin{minted}{Coq}
+Theorem bv_ult_B2P : forall n (a b : bitvector n), 
+  bv_ult a b = true <-> bv_ultP a b.
+\end{minted}
+	The \texttt{Prop} to \texttt{Bool}
+	conversion is possible for a predicate 
+	on a type, if that predicate is 
+	decidable --- that is, for every 
+	element of that type, the predicate 
+	either holds or doesn't hold. This 
+	decidability is proved via a lemma 
+	such as \texttt{bv\_ult\_B2P}. Some
+	of the lemmas used by the 
+	\texttt{Prop} to \texttt{Bool} 
+	conversion module are proved in SMTCoq's
+	libraries, others are proved in 
+	Coq's standard libraries. For 
+	example, Coq's library of integers
+	proves the equivalence between the 
+	Boolean and Propositional version 
+	of the less than predicate.
+\begin{minted}{Coq}
+Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
+\end{minted}
+	The module in SMTCoq that does
+	the conversion applies these 
+	equivalence lemmas to reduce a 
+	\texttt{Prop} predicate to a 
+	\texttt{Bool} one, before sending 
+	it to the SMT solver.
+
+\section{DPLL(T) Proofs}
+\label{smtproofs}
+	The typical SMT solver composes 
+	a SAT solver with multiple theory
+	solver in an abstraction-refinement
+	cycle, where the SAT engine 
+	tries to find a satisfying 
+	assignment of the propositional
+	abstraction of a given set of 
+	constraints, and the theory
+	solvers find a refutation of 
+	the refinement, if one exists.
+	This cycle is guided by the 
+	DPLL(T) algorithm, which is an
+	extension of the 
+	DPLL~\cite{Loveland2016}
+	(Davis-Putnam-Logemann-Loveland) 
+	algorithm that adds theory-level 
+	reasoning. DPLL(T) is a 
+	resolution-based calculus and the 
+	resolution rule is central to its 
+	reasoning:
+	\begin{center}
+		$\infer[resolution]{\phi_1 \lor ... \lor 
+			\phi_n \lor \psi_1 \lor ... \lor 
+			\psi_m}{\phi_1 \lor ... \lor \phi_n 
+			\lor \chi & \neg \chi \lor \psi_1 
+			\lor ... \lor \psi_m}$ 
+	\end{center}
+	The following is an instance of the 
+	resolution rule.
+	\begin{center}
+		$\infer{a \lor c}{a \lor \neg b 
+			& b \lor c}$
+	\end{center}
+	Given that two clauses (a clause 
+	is a disjunction of literals) hold, 
+	and a \textit{pivot}, which is a 
+	literal that occurs with opposite 
+	polarities in each clause ($b$ in 
+	the above example), the resolution 
+	rule concludes that 
+	the combination of the two clauses 
+	without either occurrence of the 
+	pivot holds.
+	
+	An SMT solver converts its input 
+	constraints into conjunction 
+	normal form (CNF), which is a 
+	conjunction of clauses. The 
+	DPLL(T) algorithm then tries 
+	to find a satisfying assignment 
+	for these clauses, and in the 
+	case that one doesn't exist,
+	resolves these clauses to 
+	conclude the empty clause 
+	$\bot$ from them, which is the 
+	most basic form of unsatisfiability.
+	
+	A proof of unsatisfiability is 
+	a tree with the input clauses at 
+	its leaves, and $\bot$ at the 
+	root, where clauses are reduced
+	via the resolution rule. In 
+	addition to the input clauses, 
+	leaves consist of clauses 
+	called \textit{theory lemmas}, 
+	which are the theory solvers' 
+	means of refining the SAT solver's
+	model (a model assigns values 
+	to variables) for the input. A
+	theory lemma, produced by the 
+	corresponding theory
+	solver, is a clause that is
+	valid in a theory. The theory 
+	solvers use theory-specific 
+	rules in addition to the 
+	resolution rule to prove these 
+	lemmas. A theory lemma in the 
+	proof tree is supported by a 
+	satellite proof of the lemma
+	provided by the theory solver. 
+	
+	In what follows, we explain the 
+	DPLL(T) algorithm and the 
+	extraction of a resolution proof
+	from an execution of it on an 
+	unsatisfiable input.
+	
+	\subsection{The DPLL(T) Algorithm}
+	\label{dpllt}
+	
+	DPLL(T) is originally presented 
+	in Nieuwenhuis et al.~\cite{DBLP:journals/jacm/NieuwenhuisOT06}, 
+	and reiterated in Katz et 
+	al.~\cite{DBLP:conf/fmcad/KatzBTRH16} 
+	as a transition system. We briefly present 
+	the transition system here. Katz et al. also 
+	present the proof-production system of the 
+	CVC4~\cite{DBLP:conf/cav/BarrettCDHJKRT11} 
+	SMT solver that we follow 
+	in this report. While other SMT solvers'
+	proofs might vary in specifics from 
+	CVC4's, the general idea of a 
+	resolution proof is still common 
+	across solvers.
+	
+	As previously mentioned, the DPLL(T)
+	algorithm can be understood as 
+	trying to satisfy the input constraints
+	at the propositional level, with 
+	refinements from theory solvers
+	about models. Checking whether a
+	formula is unsatisfiable at the 
+	propositional level involves 
+	incrementally assigning literals
+	deterministically to satisfy clauses
+	(propagation), and when that isn't an 
+	option, by guessing an 
+	assignment. When a guess goes 
+	down a path that results in 
+	unsatisfiability, the algorithm 
+	backtracks and checks whether the 
+	formula is still unsatisfiable 
+	when the guess is flipped. In 
+	what follows, we often use the 
+	notation $var \to val$ to 
+	signify the assigment of value 
+	$val$ to variable $var$. For 
+	example, $a \to True$
+	assigns Boolean value $True$ to 
+	$a$. $\models$ stands for logical 
+	entailment and $\models_T$ stands 
+	for entailment in theory $T$. A 
+	formula is entailed from nothing, 
+	if it is valid. For example, 
+	$a \land b \models a$,
+	$x > 3 \models_{LIA} x > 0$, and 
+	$\models_{LIA} x > 3 \Rightarrow 
+	x > 0$ are all logically sound 
+	entailments --- the first one 
+	propositionally, and the
+	last two in the theory of linear 
+	integer arithmetic. Note that we 
+	refer to logical implication as 
+	$\Rightarrow$ in this section and 
+	use $\to$ for assignments.
+	
+	We now formalize the DPLL(T) algorithm 
+	as a state transition systems that 
+	operates on a set of transition rules. 
+	The state of the system is either 
+	$fail$ or $\langle M, F, C \rangle$ 
+	where $M$ is the current 
+	\textit{context}, that is, 
+	the current assignment of literals in 
+	the formula; a literal in $M$ is 
+	preceded by a $\bullet$ if the literal 
+	was a decision, that is, it was 
+	guessed. For some variable $x$, 
+	the assignment $x \to True$ is added 
+	to the context by appending $x$ to 
+	$M$ and $x \to False$ is added by 
+	appending $\neg x$. $F$ is a set of 
+	clauses representing the input formula 
+	in CNF. SMT solvers generally convert 
+	arbitrary inputs to CNF and thus 
+	their proofs also involve this CNF
+	conversion phase, but we omit it here.
+	$C$ represents the conflict 
+	clause, the clause from $F$ that is 
+	falsified by the current assignment. 
+	$\prec_M$ is an ordering 
+	on the literals in $M$ ---
+	$l_1, ..., l_n \prec_M l$ if 
+	$l_1, ..., l_n$ occur before 
+	$l$ in $M$. If $M = M_0 
+	\bullet M_1 \bullet ... \bullet M_n$, 
+	such that no $\bullet$ occurs in 
+	the $M_i$'s, then each $M_i$ is a
+	\textit{decision level}, $M^{[i]}$ 
+	denotes $M_0 \bullet ... \bullet M_i$,
+	and and \texttt{lev} is a function 
+	that maps a literal in $M$ to its 
+	decision level. $Lit_F$ represents the 
+	set of literals occurring in $F$.
+	
+	The initial state of the system is 
+	$\langle \phi, F, \phi \rangle$. 
+	The final state is one of:
+	\begin{itemize}
+		\item $fail$, when $F$ is 
+		unsatisfiable.
+		\item $\langle M, F_0, \Phi \rangle$ 
+		where $F$ is satisfiable, $F_0$ is 
+		a transformation of $F$ by the 
+		algorithm that maintains its 
+		(un)satisfiability,	and $M 
+		\models F_0$.
+	\end{itemize}
+	
+	The transition system goes from the 
+	initial state to one of the possible 
+	final states by a nondeterministic 
+	application of the transition rules 
+	presented in Figure~\ref{fig:proprules} 
+	and Figure~\ref{fig:theoryrules}. In 
+	practice, they are applied using a 
+	particular strategy for efficiency.
+	A rule is applicable when all its 
+	premises hold, and it is applied to 
+	make the conclusion true. 
+
+	\begin{figure}[t]
+	\centering
+	\begin{framed}
+	\begin{tabular}{c}
+		$\infer[Prop]{M := Ml}{l_1 \lor ... \lor 
+			l_n \lor l \in F & \neg l_1,...,\neg 
+			l_n \in M & l, \neg l \notin M}$ \\ \\
+		$\infer[Dec]{M := M \bullet l}{l \in 
+			Lit_F & l, \neg l \notin 
+			M}$ \\ \\
+		$\infer[Confl]{C:=\{l_1 \lor ... \lor 
+			l_n\}}{C = \phi & l_1 \lor ... \lor 
+			l_n \in F & \neg l_1,...,\neg l_n \in 
+			M}$ \\ \\
+		$\infer[Expl]{C := \{l_1 \lor ... \lor 
+			l_n \lor D\}}{C = \{\neg l \lor D\} & 
+			l_1 \lor ... \lor l_n \lor l \in F & 
+			\neg l_1,...,\neg l_n \prec_M l}$ \\ \\
+		$\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
+		{C = \{l_1 \lor ... \lor l_n \lor l\} & 
+			\texttt{lev}\ \neg l_1, ... , 
+			\texttt{lev}\ \neg l_n \leq 
+			i < \texttt{lev}\ \neg l}$ \\ \\
+		$\infer[Learn]{F := F \cup C}{C \neq 
+			\phi}$ \\ \\
+		$\infer[Fail]{fail}{C \neq \phi & \bullet 
+			\notin M}$ \\ \\
+	\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Propositional level}
+	\label{fig:proprules}
+	\end{figure}
+
+	\begin{figure}[t]
+	\centering
+	\begin{framed}
+	\begin{tabular}{c}
+		$\infer[Prop_i]{M := Ml}{l \in Lit_F 
+			 & \models_i l_1 \lor 
+			... \lor l_n \lor l & \neg l_1, 
+			..., \neg l_n \in M & l,\neg l 
+			\notin M}$ \\ \\
+		$\infer[Confl_i]{C := \{l_1 \lor ... 
+			\lor l_n \}}{C = \phi & \models_i 
+			l_1 \lor ... \lor l_n & \neg l_1, 
+			..., \neg l_n \in M}$ \\ \\
+		$\infer[Expl_i]{C := \{l_1 \lor ... 
+			\lor l_n \lor D\}}{C = \{\neg l 
+			\lor D\} & \models_i l_1 \lor ... 
+			\lor l_n \lor l & \neg\ l_1, ..., 
+			\neg\ l_n \prec_M l}$ \\ \\
+	\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Theory level}
+		\label{fig:theoryrules}
+	\end{figure}
+
+	The propositional rules from
+	Figure~\ref{fig:proprules}
+	model the behavior of the SAT solver.
+	Propagations ($Prop$) force 
+	assignments of Boolean values to literals 
+	that are propositionally entailed. 
+	For instance, if the input 
+	formula is $\neg a \land (a \lor b)$, 
+	then the assignment $a \to False$ is 
+	required to satisfy the first conjunct,
+	$\neg a$. Now, $b \to True$ is the only 
+	way to satisfy the second conjunct, 
+	$(a \lor b)$. Both of these assignments 
+	are logically entailed propagations, 
+	given the goal of satisfying the formula. 
+	Sometimes a deterministic choice 
+	might not be entailed, instead, 
+	an assignment must be guessed 
+	using the decide rule ($Dec$). For 
+	example, to 
+	satisfy $(\neg a \lor b) \land 
+	(\neg b \lor c) \land (\neg c \lor 
+	\neg a)$, a formula 
+	with no possible propagations, 
+	one of the literals must be 
+	non-deterministically assigned.
+	For instance, the guess $a \to True$
+	forces propagations $b \to True$ and 
+	$c \to False$. Propogations and/or 
+	decisions could lead to a model in 
+	which the input formula is not satisfied. 
+	The conflict rule ($Confl$) recognizes 
+	this. In the previous example, the 
+	decision $a \to True$ led via 
+	propagations to the assignment
+	$\{a \to True,\ b \to True,\ 
+	c \to False\}$, which falsifies 
+	the second conjunct of the formula 
+	and satisfies the others. The 
+	$Confl$ rule recognizes this 
+	clause ($\neg b \lor c$) to be the 
+	conflict clause. Once a conflict is 
+	encountered, where no previous 
+	decisions were made, then the 
+	conflict was entailed, and the 
+	unsatisfiability of the input formula
+	can be concluded via the $Fail$ rule. 
+	If, there are previous decisions at
+	the time of conflict, then the backjump
+	rule ($Backj$) picks a decision that is 
+	most likely the one that resulted in 
+	the conflict, rewinds the state to 
+	that decision and flips the decision. 
+	To do this, it might need the explain 
+	rule ($Expl$) to modify the 
+	conflict clause using resolution. 
+	Since the conflict clause is initially 
+	a clause in the input, and it is only 
+	modified by resolving it with other 
+	input clauses, it is always entailed 
+	by the input. At any point, a modified 
+	conflict clause may be learned 
+	($Learn$) by adding it to the 
+	set of clauses in the input formula. 
+	The restriction in the $Backj$ rule 
+	that requires a literal in the 
+	conflict clause to be at least 
+	one decision level above the rest of 
+	the clause, forces the transition 
+	system to apply the $Expl$ rule 
+	so that the algorithm is able to 
+	backtrack further than chronological
+	backtracking (where the most 
+	recent decision is flipped), to 
+	reach the source of the conflict.
+	In our example, since there is only 
+	one decision so far, the algorithm
+	backjumps to the assignment of 
+	$a$ and flips it to $a \to False$. The 
+	propagations $b \to True$ and $c \to 
+	False$ resulted from the assignment 
+	$a \to True$, and these are undone
+	by the backjump. After flipping our 
+	initial decision, we have $a \to 
+	False$ which satisfies
+	the first and third clauses of the 
+	formula $(\neg a \lor b) \land 
+	(\neg b \lor c) \land (\neg c 
+	\lor \neg a)$. Since there 
+	are no further propagations, the 
+	decision $b \to False$ can be made 
+	to satisfy the second clause, and the 
+	entire formula. The theory rules
+	from Figure~\ref{fig:theoryrules} model 
+	the behavior of an abstract 
+	theory solver. The $Prop_i$, 
+	$Confl_i$, and $Expl_i$ rules
+	work exactly like their 
+	propositional variants, except 
+	that they can use theory lemmas, 
+	that are valid clauses in a 
+	theory produced by the theory
+	solver. 
+	
+	The transition system is 
+	\textit{refutationally sound}:
+	if an execution starting with 
+	$\langle \phi, F, \phi \rangle$ ends 
+	with $fail$, then $F$ is 
+	unsatisfiable in $T$.
+	
+	\subsection{DPLL(T) Transition Example}
+	\label{sec:transex}
+	We now look at an execution of the 
+	DPLL(T) algorithm, as presented in the 
+	previous section on an example input
+	that demonstrates the usage of 
+	the rules. Consider the following 
+	CNF formula, where a set of terms 
+	represents their conjunction.
+	\begin{center}
+		$ F: \{f(g(z)) = h(y) \lor x \neq y,\ \ 
+		f(g(z)) \neq h(y) \lor x \neq y,\ \ 
+		x = y \lor f(m) = f(n),\ \ 
+		f(m) \neq f(n) \lor x = y,\ \ 
+		f(m) = x,\ \ f(n) = y\}$
+	\end{center}
+	Each term contains 
+	additional information in the theory 
+	of equality over uninterpreted 
+	functions (EUF) where the only 
+	predicate is equality, and all
+	functions are uninterpreted. The 
+	DPLL(T) algorithm
+	works by abstracting away all the 
+	theory functionality into 
+	propositions, and then 
+	reasoning propositionally in 
+	concert with theory solvers. 
+	Consider the following propositional
+	abstraction of $F$.
+	\begin{center}
+		$\ F: \{A \lor \neg B,\ \neg A \lor 
+			\neg B,\ B \lor C,\ \neg C 
+			\lor B,\ D,\ E\}$
+	\end{center}
+
+	An execution of the DPLL(T) algorithm
+	from the previous section on $F$, from 
+	initial to final state is presented 
+	in Figure~\ref{fig:dplltex}.
+	\begin{figure}[t]
+	\begin{center}
+	\begin{tabular}{l l l l l}
+		\textbf{M} & \textbf{F} & \textbf{C} 
+		& \textbf{Rule} & \textbf{Step}\\
+		\hline
+		& $A \lor \neg B, \neg A \lor 
+			\neg B, B \lor C, D, E$ 
+			& $\phi$ & Prop $(D)$ & 1\\
+		$D$ & $A \lor \neg B, \neg A \lor 
+			\neg B, B \lor C, D, E$ & 
+			$\phi$ & Prop $(E)$ & 2\\
+		$DE$ & $A \lor \neg B, \neg A \lor 
+			\neg B, B \lor C, D, E$ & 
+			$\phi$ & Dec $(A)$ & 3\\
+		$DE\bullet A$ & $A \lor \neg B, 
+			\neg A \lor \neg B, B \lor C,
+			D, E$ & $\phi$ & Prop ($\neg A 
+			\lor \neg B$) & 4\\
+		$DE\bullet A \neg B$ & $A \lor 
+			\neg B, \neg A \lor \neg B, 
+			B \lor C, D, E$ & $\phi$ & 
+			Prop $(B \lor C)$ & 5\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E$ & $\phi$ & 
+			Confl$_{EUF}$ $(\neg C \lor$ 
+			& 6\\
+		&&&$\neg D \lor \neg E \lor B)$ &\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E$ & $\neg C \lor
+			\neg D \lor \neg E \lor	B$ & 
+			Expl $(D)$ & 7\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E$ & $\neg C \lor
+			\neg E \lor	B$ & Expl $(E)$ & 
+			8\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C, D, E$ & $\neg C \lor B$ 
+			& Expl $(B \lor C)$ & 9\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E$ & $B$ & Expl 
+			$(\neg A \lor \neg B)$ & 10\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C, D, E$ & $\neg A$ & 
+			Learn $(\neg A)$ & 11\\
+		$DE\bullet A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C, D, E, \neg A$ & $\neg 
+			A$ & Backj $(\neg A)$ & 12\\
+		$DE\neg A$ & $A \lor \neg B, \neg 
+			A \lor \neg B, B \lor C, D, E, 
+			\neg A$ & $\phi$ & Prop $(A 
+			\lor \neg B)$ & 13\\
+		$DE\neg A \neg B$ & $A \lor \neg B, 
+			\neg A \lor \neg B, B \lor C,
+			D, E, \neg A$ & $\phi$ & Prop 
+			$(B \lor C)$ & 14\\
+		$DE\neg A \neg B\ C$ & $A \lor \neg 
+			B, \neg A \lor \neg B, B \lor C, 
+			D, E, \neg A$ & $\phi$ & 
+			Confl$_{EUF}$ $(\neg C \lor$
+			& 15\\
+		&&&$\neg D \lor \neg E \lor B)$ &\\
+		$DE\neg A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E, \neg A$ & $\neg C 
+			\lor \neg D \lor \neg E \lor	
+			B$ & Expl $(D)$ & 16\\
+		$DE\neg A \neg B\ C$ & $A \lor 
+			\neg B, \neg A \lor \neg B, B 
+			\lor C,	D, E, \neg A$ & $\neg C \lor
+			\neg E \lor	B$ & Expl 
+			$(E)$ & 17\\
+		$DE\neg A \neg B\ C$ & $A \lor \neg 
+			B, \neg A \lor \neg B, B \lor C, 
+			D, E, \neg A$ & $\neg C \lor B$ 
+			& Expl $(B \lor C)$ & 18\\
+		$DE\neg A \neg B\ C$ & $A \lor \neg 
+			B, \neg A \lor \neg B, B \lor C, 
+			D, E, \neg A$ & $B$ & Expl $(A 
+			\lor \neg B)$ & 19\\
+		$DE\neg A \neg B\ C$ & $A \lor \neg 
+			B, \neg A \lor \neg B, B \lor C, 
+			D, E, \neg A$ & $A$ & Expl 
+			$(\neg A)$ & 20\\
+		$DE\neg A \neg B\ C$ & $A \lor \neg 
+			B, \neg A \lor \neg B, B \lor C, 
+			D, E, \neg A$ & $\bot$ & Fail & 
+			21\\
+	\end{tabular}
+	\end{center}
+	\caption{Execution of the DPLL(T) algorithm on $F$}
+	\label{fig:dplltex}
+	\end{figure}
+	The first and only decision is made in 
+	step 3 when $A \to True$ is assigned.
+	In step 6, the current assignment is 
+	found to be conflicting with theory
+	lemma $\neg C \lor \neg D \lor \neg E
+	\lor B$, but since this conflict 
+	came in a context where a decision
+	was made, the decision is reversed
+	in Step 12, after the conflict clause 
+	is simplified and learned. In step 15, 
+	when the same lemma is found to be 
+	conflicting with the new context, we 
+	can conclude that the input is 
+	unsatisfiable using the $Fail$ rule, 
+	since we tried both choices of 
+	assignment for $A$. This is what 
+	the solver would typically do. However, 
+	the formula $\bot$ 
+	is trivially unsatisfiable and in 
+	some given context where 
+	$x \to True$ for some $x$, an 
+	acceptable proof of unsatisfiability 
+	is to to derive from the context that 
+	$x \to False$ holds. Such a state 
+	where some $x$ and $\neg x$ holds
+	logically reduces to $\bot$ 
+	($x$ and $\neg x$ resolve to $\bot$).
+	Thus, given a set of formulas,
+	a more uniform proof of 
+	unsatisfiability of the set is 
+	to derive $\bot$ from it. This is why, 
+	in proof mode, the SMT solver, only 
+	applies the final $Fail$ rule after 
+	reducing the conflict clause to $\bot$. 
+	This is done from step 15 to 21.
+	
+	\subsection{DPLL(T) Proof Example}
+	\label{sec:proofex}
+	Now, we extract the proof from the 
+	example execution of the transition system.
+	Given an execution of a DPLL(T)-based 
+	SMT solver that ends in the $fail$ state, 
+	we can prove that the input formula 
+	$F$ is unsatisfiable by building a 
+	\textit{refutation tree} of $F$ --- a 
+	tree with the input clauses 
+	and theory lemmas at the leaves, 
+	that lead, through the application of 
+	the resolution rule, to the empty 
+	clause $\bot$ at the root. DPLL(T) is 
+	a resolution-based calculus since most 
+	of its rules perform some form of 
+	resolution (and the application of 
+	these rules are involved in the 
+	refutation tree of the input). For 
+	instance, the $Prop$ rule is a 
+	resolution of a clause in $F$ and a 
+	set of literals in $M$; the $Expl$ 
+	rule modifies the current conflict 
+	clause by resolving it with an 
+	input clause.
+	
+	Figure~\ref{fig:propproof} shows the 
+	proof tree for the unsatisfiability of 
+	$F$ from the example in 
+	Figure~\ref{fig:dplltex}. The nodes of 
+	the tree contain the clause being 
+	used. Every reduction of 
+	(a pair of) leaves to a child node 
+	is an application of the resolution 
+	rule. The proof tree is guided by 
+	the application of $Confl$ and $Expl$ 
+	rules. Every explanation corresponds 
+	to a resolution of the explanation
+	clause with the current 
+	conflict clause. The label 
+	of the resolution of two 
+	nodes in the tree shows the 
+	step number of the application 
+	of the $Expl$ from 
+	Figure~\ref{fig:dplltex}.
+	The left subtree is a proof of 
+	$\neg A$,which is learned in steps 
+	1 to 11, and the right subtree is the 
+	proof of $A$ which is concluded from 
+	steps 12 to 20. Step 21 performs 
+	the final resolution of $A$ and 
+	$\neg A$ to derive $\bot$.
+	
+	\begin{figure}[t]
+		Refutation tree of $F$:
+		\begin{prooftree}
+			\defaultHypSeparation {\hskip 0in}
+			\AxiomC{Proof of $\neg A$}
+			\AxiomC{Proof of $A$}
+			\RightLabel{20}
+			\BinaryInfC{$\bot$}
+		\end{prooftree}
+		where proof of $\neg A$:
+		\begin{prooftree}
+			\AxiomC{EUF Proof}
+			\UnaryInfC{$\neg C \lor \neg D 
+				\lor \neg E \lor B$}
+			\AxiomC{$D$}
+			\RightLabel{7}
+			\BinaryInfC{$\neg C \lor \neg E 
+				\lor B$}
+			\AxiomC{$E$}
+			\RightLabel{8}
+			\BinaryInfC{$\neg C \lor B$}
+			\AxiomC{$B \lor C$}
+			\RightLabel{9}
+			\BinaryInfC{$B$}
+			\AxiomC{$\neg A \lor \neg B$}
+			\RightLabel{10}
+			\BinaryInfC{$\neg A$}
+		\end{prooftree}
+		and proof of $A$:
+		\begin{prooftree}
+			\AxiomC{EUF Proof}
+			\UnaryInfC{$\neg C \lor \neg D 
+				\lor \neg E \lor B$}
+			\AxiomC{$D$}
+			\RightLabel{16}
+			\BinaryInfC{$\neg C \lor \neg E 
+				\lor B$}
+			\AxiomC{$E$}
+			\RightLabel{17}
+			\BinaryInfC{$\neg C \lor B$}
+			\AxiomC{$B \lor C$}
+			\RightLabel{18}
+			\BinaryInfC{$B$}
+			\AxiomC{$A \lor \neg B$}
+			\RightLabel{19}
+			\BinaryInfC{$A$}
+		\end{prooftree}
+	\caption{Proof tree for example in 
+		Figure~\ref{fig:dplltex}}
+	\label{fig:propproof}
+	\end{figure}
+	Finally, notice that the theory 
+	lemma used needs to be justified by
+	a proof from the EUF theory solver.
+	This is explained in the next 
+	section.
+	
+	\subsection{Theory Lemma Proofs}
+	Theory lemmas at the leaves are 
+	justified by satellite proofs 
+	from the theory solver that produce 
+	them, as shown in 
+	Figure~\ref{fig:propproof}. The theory 
+	solvers that produce the theory lemmas
+	are also responsible for justifying 
+	these lemmas. So, in the refutation 
+	tree of the input produced by the 
+	SAT solver, there are theory lemmas 
+	at the leaves, which need to be 
+	justified by proof trees 
+	from the theory solver. These 
+	are often proved by contradiction: 
+	given a lemma $L$, a proof of $L$, 
+	is a derivation of $\bot$ from 
+	$\neg L$. The only theory lemma
+	used in our example is 
+	\begin{align*}
+		L :\ & \neg C \lor \neg D \lor 
+			\neg E \lor B, \\
+		\textrm{or, }L :\ & f(m) \neq f(n) 
+			  \lor f(m) \neq x \lor 
+			  f(n) \neq y \lor x = y\\
+	 \textrm{equivalently, }L :\ &
+		f(m) = f(n) \Rightarrow 
+		f(m) = x \Rightarrow f(n) = y 
+		\Rightarrow x = y
+	\end{align*}
+	Taking its negation gives:
+	\begin{align*}
+		\neg L :\ & C \land D \land E \land \neg B\\
+			\textrm{or, } \neg L :\ & 
+			f(m) = f(n) \land f(m) = x \land
+			f(n) = y \land x \neq y
+	\end{align*}
+	Finaly, the proof tree from the 
+	theory solver of $L$, or EUF Proof from 
+	Figure~\ref{fig:propproof}, uses the 
+	conjuncts of $\neg L$ as leaves --- $C, D, E, 
+	\neg B$ --- and derives $\bot$. The proof is 
+	shown in Figure~\ref{fig:eufproof}, and it 
+	uses the transitivity and symmetry of 
+	equality in addition to the resolution
+	rule.
+	
+	\begin{figure}[t]
+	\begin{prooftree}
+		\AxiomC{$f(m) = x$}
+		\RightLabel{$Symmetry$}
+		\UnaryInfC{$x = f(m)$}
+		\AxiomC{$f(m) = f(n)$}
+		\RightLabel{$Transitivity$}
+		\BinaryInfC{$x = f(n)$}
+		\AxiomC{$f(n) = y$}
+		\RightLabel{$Transitivity$}
+		\BinaryInfC{$x = y$}
+		\AxiomC{$x \neq y$}
+		\RightLabel{$Resolution$}
+		\BinaryInfC{$\bot$}
+	\end{prooftree}
+	\caption{EUF Proof from Figure~\ref{fig:propproof}}
+	\label{fig:eufproof}
+	\end{figure}
+	
+\bibliographystyle{abbrv}
+\bibliography{bib3}
+
+\end{document}
