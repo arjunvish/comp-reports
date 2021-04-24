@@ -34,26 +34,77 @@
 \section{Introduction}
 \label{sec:intro}
 	In this report, we will discuss the 
-	internals of two tools that use 
-	automatic theorem provers (ATPs) to 
-	provide automation to interactive 
-	theorem provers (ITPs) - 
-	SMTCoq~\cite{DBLP:phd/hal/Keller13} 
-	and Sledgehammer's SMT solver 
-	integration by Bohme et al.~\cite{bohme}. 
-	Specifically, we will look at the 
-	following aspects of each tool. For 
-	SMTCoq, we will study 
-	how proof by reflection is used to 
-	\textit{reflect} proofs from an SMT 
-	solver to Coq's logic, and the data 
-	structures used to facilitate this 
-	reflection.	Sledgehammer provides a 
-	translation from higher-order logic 
-	(HOL) to many-sorted first-order logic 
-	(MSFOL), so that SMT-solvers can be 
-	used on HOL problems. We will look at 
-	this translation in detail.
+	integration of automatic theorem provers 
+	(ATPs) with interactive theorem 
+	provers (ITPs). We will particularly
+	focus on the ATP category of 
+	satisfiability modulo theories or 
+	SMT solvers. ITPs are highly 
+	reliable tools with a small proof kernel. 
+	They require the user to write elaborate 
+	proofs to formalize properties, and 
+	provide little automation. ATPs, on the 
+	other hand automatically prove formulas
+	without any user intervention.  
+	Users would benefit from having 
+	the reliability of ITP results 
+	with the automation capabilities
+	of ATPs. However, SMT solvers have an 
+	enormous code base, and due to the 
+	lack of a small, verifiable kernel, 
+	are susceptible to bugs. Thus, in a 
+	collaboration with an SMT 
+	solver, an ITPs trust-base would be 
+	extended to include the solver's. To 
+	avoid compromising the proof kernel of 
+	the ITPs, SMT solvers can 
+	produce proofs of their results. 
+	We explore how proof producing 
+	SMT solvers can guide ITPs in 
+	finding proofs for formulas - 
+	a process called \textit{proof 
+	search}. To use SMT solvers in the
+	automation of proof search in 
+	ITPs, the proof object from the SMT 
+	solver guides the proof search 
+	in the ITP via a process called
+	\textit{proof reconstruction}.
+	Reconstruction can be implemented 
+	as a meta-procedure. For example, 
+	reconstruction of SMT solver proofs 
+	in Isabelle/HOL are done external to 
+	the prover's logic~\cite{bohme}.
+	Here, the external ATP's proof guides 
+	\textit{Metis}, Sledgehammer's
+	internal ATP in its proof search.
+	The final proof is found by 
+	\textit{Metis} and the SMT solver's 
+	proof is only used to prune the 
+	search space, and fill in holes.
+	In SMTCoq~\cite{DBLP:phd/hal/Keller13},
+	this reconstruction is 
+	expressed within the ITP's logic 
+	by a process called 
+	\textit{computational reflection}.
+	Here, the SMT solver's logic is 
+	embedded in Coq's logic, and then 
+	a proof of the SMT solver is 
+	directly used to obtain the 
+	proof of a formula in Coq. 
+	While this reduces the 
+	proof obligation within Coq, it incurs
+	an overhead of checking the SMT 
+	solver's proof, which is typically 
+	large, inside Coq, making it a
+	potentially time consuming process. 
+	We look in detail into both these 
+	approaches of integrating SMT solvers 
+	with ITPs.
+	
+\section{Preliminaries}
+\label{sec:prelims}
+	First-order logic\\
+	Clauses as sets\\
 
 \section{SMTCoq}
 \label{sec:smtcoq}
@@ -79,6 +130,136 @@
 	to lift these up to Coq proofs, in a 
 	process called computational 
 	reflection.
+	
+	\begin{figure}[t]
+	\begin{framed}
+	Coq calls SMTCoq for a Boolean formula $F$:
+\begin{minted}{Coq}
+Theorem F : forall (a b c : bool), (b && negb c) || 
+  (a && negb b) || negb a || c.
+Proof.
+  smt.
+\end{minted}
+	\end{framed}
+	\begin{center}
+		$\big\downarrow$
+	\end{center}
+	\begin{framed}
+	$F: (b \land \neg c) \lor 
+	(a \land \neg b) \lor \neg a 
+	\lor c$
+	\end{framed}
+	\begin{center}
+		$\big\downarrow$
+	\end{center}
+	\begin{framed}
+	$\neg F: \neg((b \land \neg c) 
+	\lor (a \land \neg b) \lor \neg 
+	a \lor c)$
+	\end{framed}
+	\begin{center}
+		$\big\downarrow$
+	\end{center}
+	\begin{framed}
+	$F$ after CNF conversion: 
+	$\{\neg b \lor c, \neg a \lor b,
+	a, \neg c\}$
+	\end{framed}
+	\begin{center}
+		$\big\downarrow$
+	\end{center}
+	\begin{framed}
+	Proof $t$ of unsatisfiability from SMT 
+	solver:
+	\begin{prooftree}
+		\AxiomC{$\neg c$}
+		\AxiomC{$\neg b \lor c$}
+		\AxiomC{$\neg a \lor b$}
+		\BinaryInfC{$\neg a \lor c$}
+		\AxiomC{$a$}
+		\BinaryInfC{$c$}
+		\BinaryInfC{$\bot$}
+	\end{prooftree}
+	\end{framed}
+	\caption{SMT solver proof of an example 
+	formula $F$}
+	\label{fig:smtex}
+	\end{figure}
+	SMT solvers refutationally prove 
+	input formulas --- given a formula
+	$F$, the solver proves that the 
+	negation of $F$ ($\neg F$) is 
+	unsatisfiable, which is equivalent
+	to proving that $F$ is valid. 
+	To do this, the SMT solve converts 
+	$\neg F$ into conjunction or clausal 
+	normal form (CNF) which is a 
+	conjunction of clauses (disjunctions 
+	of literals). It then uses 
+	a combination of a SAT solver and 
+	multiple theory	solvers to reduce 
+	the set of input clauses to the 
+	empty clause via resolution
+	and other rules of inference. Thus,
+	deriving the empty clause, which 
+	represents $False$, from the input 
+	clauses proves that the input clauses 
+	are unsatisfiable. A proof
+	from an SMT solver is a tree 
+	with the input clauses (from the 
+	negation of the input formula) at
+	the leaves and the empty clause
+	at the root. This pipeline is 
+	presented for an example formula
+	in~\cite{fig:smtex}.
+	
+	SMTCoq implements a checker for 
+	such SMT solver proofs. It encodes
+	the language of SMT solvers
+	in Coq as two different embeddings. 
+	Given a logical framework A, and 
+	a logical framework B, in which we 
+	want to represent the language of A, 
+	there are two ways to achieve this
+	representation, and 
+	both of these are necessary for 
+	reflection:
+	\begin{itemize}
+		\item \textit{Shallow Embedding: }
+		Use types and terms in B that 
+		correspond to those of A, to 
+		represent terms of A. A shallow
+		embedding of SMT formulas in 
+		Coq is Coq's \texttt{bool} 
+		type of Boolean types.
+		\item\textit{Deep Embedding: }
+		Define custom types in B that 
+		correspond to those of A, and 
+		define inside B, the meaning of 
+		terms of these custom types with 
+		respect to shallow terms. A 
+		deep embedding of SMT formulas 
+		is defined as the type 
+		\texttt{form} in SMT solvers.
+	\end{itemize}
+
+	Given formula $F$, SMTCoq's proof 
+	checker checks the deep embedding of 
+	$F$ against the proof of $F$ from the 
+	SMT solver. If the checker succeeds, 
+	SMTCoq is able to reflect the formula in 
+	the deep embedding to its shallow 
+	embedding. This is done via a 
+	correctness lemma for the checker
+	(also called the reflection principle),
+	which is a proof that for any 
+	formula in the deep embedding, if 
+	the checker is able to check an SMT
+	proof against it, then the formula in 
+	the shallow embedding is true. A 
+	proof of $F$ in the shallow 
+	embedding is just an instantiation of 
+	the correctness lemma with $F$.
 	
 	\subsection{Proof by Reflection}
 	\label{reflect}
@@ -254,25 +435,7 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	mentioned reduction mechanism and 
 	the conversion rule.
 	
-	Given a logical framework A, and 
-	a logical framework B, in which we 
-	want to represent the language of A, 
-	there are two ways to achieve this
-	representation, and 
-	both of these are necessary for 
-	reflection:
-	\begin{itemize}
-		\item \textit{Shallow Embedding: }
-		Use types and terms in B that 
-		correspond to those of A, to 
-		represent terms of A.
-		\item\textit{Deep Embedding: }
-		Define custom types in B that 
-		correspond to those of A, and 
-		define inside B, the meaning of 
-		terms of these custom types with 
-		respect to shallow terms.
-	\end{itemize}
+	
 
 	SMT solvers prove formulas over 
 	sorted (typed) terms and these 
@@ -317,11 +480,10 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	formula	in the deep embedding to the 
 	formula in the shallow embedding. 
 	An \textit{interpretation function}
-	defines the meaning of terms and types 
-	in the deep embedding in terms of their
-	shallow counterparts and is used in the 
-	reflection principle. The reflection 
-	principle 
+	defines the meaning of deep 
+	formulas in terms of shallow formulas
+	and is used in the reflection 
+	principle. The reflection principle 
 	proves that if a checker is able to 
 	check a formula in the deep embedding,
 	its interpretation (in the shallow 
@@ -355,21 +517,9 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 		\item $\mathbb{I}$ --- the 
 		interpretation function, which 
 		is a Boolean predicate over 
-		\texttt{form}s and 
-		valuations of free variables 
-		(of type 
-		\texttt{form} $\to$ \texttt{val}
-		$\to$ \texttt{bool}). The interpretation
-		function provides a fixed 
-		interpretation of types, and 
-		terms modulo free variables. The 
-		interpretation
-		of terms uses a valuation function
-		$\nu$ that interprets 
-		free variables. The interpretation
-		of a formula \texttt{f} for a 
-		valuation $\nu$ is specified as 
-		$\mathbb{I}_{\nu}(\texttt{f})$.
+		\texttt{form}s (of type 
+		\texttt{form} $\to$ 
+		\texttt{bool})
 		\item \texttt{T} --- the type of 
 		proof objects from the SMT solver
 	\end{itemize}
@@ -388,10 +538,10 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 			\texttt{checker\_correct :} 
 			\forall\ (f : \texttt{form})\ 
 			(t : \texttt{T})\ 
-			(\nu : \texttt{val}),\ 
+			(\mathbb{I} : \texttt{interp}),\ 
 			\texttt{checker}\ f\ t\ = 
 			\texttt{true} \to \\
-			\mathbb{I}_{\nu}(f) = 
+			\mathbb{I}(f) = 
 			\texttt{true}
 		\end{align*}
 	\end{itemize}
@@ -400,12 +550,12 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	is computationally heavy, to 
 	produce proofs of formulas. For any
 	formula $f$, SMT proof $t$, and
-	valuation $\nu$,
+	interpretation $\mathbb{I}$,
 	the proof of $\mathbb{I}(f) = 
 	\texttt{true}$ is simply:
 	\begin{center}
 		$\texttt{checker\_correct}\ \ 
-		f\ \ t\ \ \nu\ \ 
+		f\ \ t\ \ \mathbb{I}\ \ 
 		(\texttt{refl\_equal}\ \ 
 		(\texttt{checker}\ f\ t)\ \ 
 		\texttt{true})$
@@ -508,28 +658,27 @@ Inductive form : Type :=
 	The reflection principle is a proof of 
 	correctness of the main checker:
 	\begin{align*}
-		\texttt{main\_checker\_correct: } 
-		&\forall\ input\ proof\ \nu,\  
-		\texttt{main\_checker }input\  
-		proof = \texttt{true}\\
-		&\mathbb{I}_{\nu}(f)
-		= \texttt{true}
+		\texttt{main\_checker\_correct
+		: } &\texttt{$\forall$ 
+		$input$ $proof$ $\mathbb{I}$, 
+		main\_checker $input$ 
+		$proof$ = true}\\
+		&\texttt{$\to$ 
+		unsat $\mathbb{I}$
+		$\neg input$ = true}
 	\end{align*}
-	where $\nu$ is the valuation 
-	of free variables used by 
-	the interpretation function 
-	$\mathbb{I}$. If the checker 
-	is successful in checking the 
-	proof of a formula in the deep
-	embedding, the reflection 
-	principle converts this into 
-	a proof of the formula in the 
-	shallow embedding, via the 
-	interpretation function, and 
-	by doing this for all valuations,
-	it proves the validity of the 
-	formula (it is true for any 
-	model). Since each small
+	where $\mathbb{I}$ is the 
+	interpretation function that 
+	relates the deep formula to its 
+	corresponding shallow embedding,
+	and \texttt{(unsat $\mathbb{I}$ $f$)} 
+	returns \texttt{true} if 
+	$\mathbb{I}(f)$ is unsatisfiable. 
+	Thus, \texttt{unsat} specifies 
+	the validity of $input$ 
+	(or the unsatisfiability of its 
+	negation) in the shallow 
+	embedding. Since each small
 	checker modifies $input$, 
 	there is a similar correctness 
 	proof for each small checker 

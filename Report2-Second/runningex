@@ -1,0 +1,4 @@
+(b ^ ~c) \/ (a ^ ~b) \/ ~a \/ c
+After CNF conversion
+(~b \/ c, ~a \/ b, a, ~c)
+Proof tree in Fig 6 of qual with Subst(1 -> a, 2 -> b, 5 -> c).
