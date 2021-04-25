@@ -116,6 +116,81 @@
 	SMTCoq, noting that most features are 
 	shared with the SAT	solver integration.
 	
+	\begin{figure}
+		\begin{framed}
+			\textsc{Step 1}: Coq calls SMTCoq over 
+			a Boolean formula $F$:
+			\begin{minted}{Coq}
+Theorem F : forall (a b c : bool), (b && negb c) || 
+  (a && negb b) || negb a || c.
+Proof.
+  smt.
+			\end{minted}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\begin{center}
+				\textsc{Step 2}: SMT solver 
+				proves $F$ and returns proof 
+				\texttt{t}. This step is 
+				expanded in Fig.~\cite{fig:smtex}
+			\end{center}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\textsc{Step 3}: SMT Coq's checker 
+			checks deep embedding of $F$ 
+			(\texttt{f}) against proof \texttt{t}:
+			\begin{center}
+				\texttt{checker f t = true}
+			\end{center}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\textsc{Step 4}: Reflection principle 
+			reflects deep embedding to shallow 
+			embedding $\mathbb{I}(\texttt{f})$:
+			\begin{center}
+				\texttt{checker\_correct f t 
+					$\mathbb{I}$
+					(refl\_equal (checker f t) 
+					true)}
+			\end{center}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\textsc{Step 5}: Proof of $F$ is 
+			completed in Coq:
+			\begin{minted}{Coq}
+Theorem F : forall (a b c : bool), (b && negb c) || 
+  (a && negb b) || negb a || c.
+Proof.
+  smt.
+Qed.
+			\end{minted}
+		\end{framed}
+		
+		\caption{SMTCoq's journey in proving 
+			example Boolean formula $F$}
+		\label{fig:smtcoqex}
+	\end{figure}
+
 	ATPs like SMT solvers are susceptible 
 	to bugs due to the large code-bases 
 	used to support	their automation. 
@@ -129,62 +204,63 @@
 	Coq's computational capabilities 
 	to lift these up to Coq proofs, in a 
 	process called computational 
-	reflection.
-	
+	reflection. This is illustrated in 
+	Fig.~\cite{fig:smtcoqex} using an 
+	example.
+
 	\begin{figure}[t]
-	\begin{framed}
-	Coq calls SMTCoq for a Boolean formula $F$:
-\begin{minted}{Coq}
-Theorem F : forall (a b c : bool), (b && negb c) || 
-  (a && negb b) || negb a || c.
-Proof.
-  smt.
-\end{minted}
-	\end{framed}
-	\begin{center}
-		$\big\downarrow$
-	\end{center}
-	\begin{framed}
-	$F: (b \land \neg c) \lor 
-	(a \land \neg b) \lor \neg a 
-	\lor c$
-	\end{framed}
-	\begin{center}
-		$\big\downarrow$
-	\end{center}
-	\begin{framed}
-	$\neg F: \neg((b \land \neg c) 
-	\lor (a \land \neg b) \lor \neg 
-	a \lor c)$
-	\end{framed}
-	\begin{center}
-		$\big\downarrow$
-	\end{center}
-	\begin{framed}
-	$F$ after CNF conversion: 
-	$\{\neg b \lor c, \neg a \lor b,
-	a, \neg c\}$
-	\end{framed}
-	\begin{center}
-		$\big\downarrow$
-	\end{center}
-	\begin{framed}
-	Proof $t$ of unsatisfiability from SMT 
-	solver:
-	\begin{prooftree}
-		\AxiomC{$\neg c$}
-		\AxiomC{$\neg b \lor c$}
-		\AxiomC{$\neg a \lor b$}
-		\BinaryInfC{$\neg a \lor c$}
-		\AxiomC{$a$}
-		\BinaryInfC{$c$}
-		\BinaryInfC{$\bot$}
-	\end{prooftree}
-	\end{framed}
-	\caption{SMT solver proof of an example 
-	formula $F$}
-	\label{fig:smtex}
+		\begin{framed}
+			\textsc{Step 2.1}: $F$ is negated:
+			\begin{align*}
+				F&: (b \land \neg c) \lor 
+				(a \land \neg b) \lor \neg a 
+				\lor c\\
+				\neg F&: \neg((b \land \neg c) 
+				\lor (a \land \neg b) \lor \neg 
+				a \lor c)
+			\end{align*}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\textsc{Step 2.2}: $\neg F$ after CNF 
+			conversion is checked for 
+			unsatisfiability by the SMT solver:
+			\begin{align*}
+				&\{\neg b \lor c, \neg a \lor b,
+				a, \neg c\}
+			\end{align*}
+		\end{framed}
+		
+		\begin{center}
+			$\big\downarrow$
+		\end{center}
+		
+		\begin{framed}
+			\textsc{Step 2.3}: SMT solver produces 
+			proof \texttt{t} of 
+			unsatisfiability of $\neg F$ or of
+			validity of $F$:
+			\begin{prooftree}
+				\AxiomC{$\neg c$}
+				\AxiomC{$\neg b \lor c$}
+				\AxiomC{$\neg a \lor b$}
+				\BinaryInfC{$\neg a \lor c$}
+				\AxiomC{$a$}
+				\BinaryInfC{$c$}
+				\BinaryInfC{$\bot$}
+			\end{prooftree}
+		\end{framed}
+	
+		\caption{The SMT Solver's role in 
+			helping SMTCoq prove example 
+			formula $F$.}
+		\label{fig:smtex}
 	\end{figure}
+
 	SMT solvers refutationally prove 
 	input formulas --- given a formula
 	$F$, the solver proves that the 
@@ -209,13 +285,15 @@ Proof.
 	with the input clauses (from the 
 	negation of the input formula) at
 	the leaves and the empty clause
-	at the root. This pipeline is 
-	presented for an example formula
-	in~\cite{fig:smtex}.
+	at the root. The role of the SMT
+	solver from Fig.~\cite{fig:smtcoqex}
+	is elaborated in Fig.~\cite{fig:smtex}.
+	The SMT solver's proof format is 
+	detailed in Report 3.
 	
 	SMTCoq implements a checker for 
-	such SMT solver proofs. It encodes
-	the language of SMT solvers
+	SMT solver proofs (Step 3). It 
+	encodes the language of SMT solvers
 	in Coq as two different embeddings. 
 	Given a logical framework A, and 
 	a logical framework B, in which we 
@@ -241,6 +319,9 @@ Proof.
 		deep embedding of SMT formulas 
 		is defined as the type 
 		\texttt{form} in SMT solvers.
+		\texttt{f} from 
+		Fig.~\cite{fig:smtcoqex} has
+		type \texttt{form}.
 	\end{itemize}
 
 	Given formula $F$, SMTCoq's proof 
@@ -260,184 +341,84 @@ Proof.
 	proof of $F$ in the shallow 
 	embedding is just an instantiation of 
 	the correctness lemma with $F$.
+	Step 4 shows the instantiation of 
+	the reflection principle with 
+	the right objects to obtain the 
+	proof of our example formula 
+	from Fig.~\cite{fig:smtcoqex}. 
+	The interpretation function 
+	$\mathbb{I}$ transforms 
+	formulas in the deep embedding
+	to their shallow embeddings,
+	and so $\mathbb{I}(\texttt{f})$
+	is exactly the proof required 
+	to close theorem $\texttt{F}$
+	in Coq. The reflection principle 
+	is explained in the next section.	
 	
-	\subsection{Proof by Reflection}
-	\label{reflect}
-	\texttt{Prop} is the type of 
-	constructive propositions in Coq. 
-	Additionally, Coq also has a 
-	classical Boolean type, 
-	\texttt{bool}, which is 
-	computational --- it is an 
-	inductive type with constructors 
-	\texttt{true} and \texttt{false}. 
-	As a consequence, one can 
-	perform case analysis on 
-	\texttt{bool} values since they 
-	are decidable. Propositions 
-	aren't decidable - one cannot 
-	observe whether any given 
-	proposition is true or false. 	
-	Using the \texttt{bool} type, a 
-	first-order formula can be 
-	expressed in Coq as a \texttt{bool}
-	term. For example, for Booleans 
-	\texttt{a} and \texttt{b}, 
-	\texttt{implb a (a || b)} 
-	expresses the first-order formula 
-	$a \to a \lor b$, where the logical 
-	implication and logical disjunction 
-	symbols are \texttt{implb} and 
-	\texttt{||} for Coq Booleans, and 
-	those for first-order logic are 
-	$\to$ and $\lor$, respectively. The 
-	fact that a Boolean formula in Coq 
-	holds is expressed by equating it to 
-	true.
-\begin{minted}{Coq}
-Lemma BoolForm : forall (a b : bool), implb a (a || b) = true.
-\end{minted}
-	Note that this is a classical formula 
-	in Coq expressed using the Boolean type. 
-	Using Coq's constructive proposition type,
-	the same formula is expressed as follows.
-\begin{minted}{Coq}
-Lemma PropForm : forall (a b : Prop), a -> a \/ b.
-\end{minted}
-	where \texttt{->} and $\backslash/$ are 
-	Coq's propositional implication and 
-	disjunction. SMTCoq proves formulas 
-	in Coq that have Boolean type, and 
-	not formulas over Coq propositions.
-	 
-	The process of computational 
-	reflection relies heavily on 
-	Coq's \textit{conversion rule}.
-	Coq's Calculus of Inductive 
-	Constructions (CIC) is a 
-	$\lambda-$calculus that has a 
-	reduction mechanism for terms. The
-	reduction rules form a strongly 
-	normalizing system. The calculus's
-	conversion rule allows a term to 
-	have multiple types, as long as the 
-	types have the same normal forms. For 
-	instance, for some predicate $P$ 
-	over natural numbers, a term that 
-	has type $P(10)$ also has type 
-	$P(5*2)$ and $P(20-10)$. Due 
-	to the conversion rule, 
-	computations can be used in Coq's 
-	reasoning and proof terms can be 
-	found simply by computing normal 
-	forms of types.
+	SMTCoq is \textit{sound} ---
+	when it proves a formula in Coq, the 
+	formula is valid and thus the proof
+	can be closed (using \texttt{Qed.},
+	as in Fig.~\cite{fig:smtcoqex}), but 
+	not \textit{complete} --- when it 
+	fails to prove a formula, we can't 
+	be certain that the formula isn't 
+	valid. This is because, the underlying 
+	SMT solver cannot decide certain 
+	formulas - given a formula, it could 
+	either return \texttt{sat} 
+	(satisfiable), \texttt{unsat} 
+	(unsatisfiable), or 
+	\texttt{unknown} (`don't know').
 	
-	\begin{comment}
-	The 
-	conversion rule includes more 
-	complicated reductions of 
-	types that include $\beta$-reductions,
-	$\alpha-$conversions (that perform
-	variable renaming), 
-	$\zeta-$conversions (of local 
-	\texttt{let} definitions), and 
-	$\eta-$conversion of terms with a 
-	functional type. These are explained 
-	using the following example: the type 
-	of the term 
-	\begin{center}
-		\texttt{(fun (x : Type $\to$ Type) 
-		$\implies$ x) (fun (z : Type) 
-		$\implies$ let a := z in a)}  
-	\end{center}
-	is the same as the type of the term 
-	\begin{center}
-		\texttt{fun (y : Type) $\implies$ y}.
-	\end{center}
-	In other words, the two terms are 
-	convertible to each other. 
-	\texttt{Type} is part of Coq's
-	type hierarchy, and an instance of 
-	\texttt{Type} is a set of terms 
-	(or a type at the bottom of the 
-	hierarchy) such as \texttt{nat},
-	the type of natural numbers (to be 
-	precise, \texttt{Set} is the 
-	type of \texttt{nat} and 
-	\texttt{Type} is the type of 
-	\texttt{Set}, but this simplification
-	still makes the point). The syntax
-	\texttt{fun (x : $\alpha$) $\implies$
-	y} represents a $\lambda$-abstraction 
-	$\lambda(x : \alpha).y$. The 
-	type conversion takes place as follows.
-	The term
-	\begin{center}
-		\texttt{(fun (x : Type $\to$ Type) 
-			$\implies$ x) (fun (z : Type) 
-			$\implies$ let a := z in a)}  
-	\end{center}
-	reduces to
-	\begin{center}
-	\texttt{(fun (x : Type $\to$ Type) 
-		$\implies$ x) (fun (z : Type) 
-		$\implies$ z)}	
-	\end{center}
-	by $\zeta-$reduction of the \texttt{let}
-	expression. $\beta-$reducing this 
-	term, gives 
-	\begin{center}
-		\texttt{fun (z : Type) 
-			$\implies$ z}	
-	\end{center}	 
-	which is $\alpha-$convertible to 
-	\begin{center}
-		\texttt{fun (y : Type) $\implies$ y}.
-	\end{center}
-	by renaming the $z$ to $y$.
-	\end{comment}
+	\subsection{Checker}
+	\label{sec:checker}
+	SMTCoq's checker checks the deep embedding
+	of SMT formulas in Coq against the 
+	proof trees discharged by the SMT solver.
+	Recall that a deep embedding is an
+	inductive type written in 
+	Coq representing SMT formulas. 
+	In the following, we present 
+	a simplified version of SMTCoq's 
+	deep embedding. The actual embedding 
+	uses Coq's machine integers to 
+	implement sharing of terms and 
+	optimize space, but an unoptimized 
+	and simpler version is presented 
+	below. 
 	
-	A proposition in Coq is proved by 
-	providing to Coq's type checker, a 
-	proof term that inhabits the 
-	proposition; in other words, a 
-	proof term that has the proposition 
-	as its type. Automation can be 
-	added to Coq by implementing 
-	methods in Coq, that find the right 
-	proof term for propositions --- a 
-	process called \textit{proof search}. 
-	Such a method could use an external 
-	solver, such as an ATP, to guide 
-	proof search. However, ATPs 
-	typically provide automatic 
-	proofs without justification - 
-	by answering the question `does F 
-	hold?' with	yes/no. To use the 
-	result of an SMT solver without 
-	compromising Coq's kernel, the ATP 
-	would have to produce, in addition 
-	to a result, a proof object
-	that justifies the result. This 
-	proof object will guide the proof search 
-	in Coq in a process called 
-	\textit{proof reconstruction}. 
-	Reconstruction can be implemented 
-	as a meta-procedure. For example, 
-	reconstruction of SMT solver proofs 
-	in Isabelle/HOL are done external to 
-	the prover's logic~\cite{bohme}. 
-	This reconstruction can also be 
-	expressed within the prover's logic 
-	by a process called 
-	\textit{computational reflection}, 
-	which relies on the previously 
-	mentioned reduction mechanism and 
-	the conversion rule.
+	\texttt{form} is the type of 
+	formulas:
+	\begin{minted}{coq}
+Inductive form : Type :=
+ | Fatom (_ : atom)
+ | Ftrue
+ | Ffalse
+ | Fnot (_ : form)
+ | Fand (_ : array form)
+ | For (_ : array form)
+ | Fimp (_ : array form)
+ | Fxor (_ _ : form)
+ | Fiff (_ _ : form)
+ | Fite (_ _ _ : form)
+	\end{minted}
+	where a formula can be an atom, 
+	\texttt{true}, \texttt{false};
+	a negation of a formula; a 
+	conjunction, disjunction, or 
+	implication of two or more 
+	formulas; an exclusive-or or
+	an equivalence of two formulas; 
+	or an if-then-else of three formulas.
+	\texttt{atom} is the type of atoms, 
+	which can be variables, 
+	constants, or applications of 
+	functions belonging to 
+	different theories.
 	
-	
-
-	SMT solvers prove formulas over 
+	 solvers prove formulas over 
 	sorted (typed) terms and these 
 	sorts correspond to types in 
 	Coq that are specified in the 
@@ -467,245 +448,31 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	for these within Coq. These 
 	features are available as part 
 	of Coq's standard library 
-	for shallow terms. 
+	for shallow terms.
 	
-	The main components of SMTCoq are 
-	a \textit{checker}, that checks 
-	a proof produced by an ATP for a 
-	formula against the deep embedding 
-	of that formula; and a 
-	\textit{reflection principle}, 
-	or a correctness lemma of the checker,
-	that performs the reflection of the 
-	formula	in the deep embedding to the 
-	formula in the shallow embedding. 
-	An \textit{interpretation function}
-	defines the meaning of deep 
-	formulas in terms of shallow formulas
-	and is used in the reflection 
-	principle. The reflection principle 
-	proves that if a checker is able to 
-	check a formula in the deep embedding,
-	its interpretation (in the shallow 
-	embedding) is true. A proof of 
-	a formula in the shallow embedding 
-	in Coq is then just an instantiation 
-	of this lemma with a deep formula that 
-	the SMT solver is able to prove.
-	Work is then done by Coq's 
-	computational mechanism in running
-	the checker on the deep embedding 
-	of the formula and the proof 
-	from the SMT solver. Deep and shallow 
-	embeddings were first introduced 
-	while discussing embedding 
-	hardware description languages 
-	in the HOL theorem 
-	prover~\cite{10.5555/645902.672777}.
-	
-	Formally, reflection of proofs 
-	in SMTCoq is defined as follows. 
-	In Coq, we have 
-	\begin{itemize}
-		\item \texttt{form} --- a data 
-		structure representing the deep 
-		embedding of SMT formulas
-		\item \texttt{bool} --- the 
-		Boolean type in Coq 
-		representing the shallow 
-		embedding of SMT formulas
-		\item $\mathbb{I}$ --- the 
-		interpretation function, which 
-		is a Boolean predicate over 
-		\texttt{form}s (of type 
-		\texttt{form} $\to$ 
-		\texttt{bool})
-		\item \texttt{T} --- the type of 
-		proof objects from the SMT solver
-	\end{itemize}
-	Reflection requires the following:
-	\begin{itemize}
-		\item a function 
-		\texttt{checker : form $\to$ T $\to$ 
-		bool} implemented in Coq such that 
-		\texttt{checker}$\ f\ t$ is 
-		\texttt{true} if proof object $t$
-		justifies $f$
-		\item the reflection principle, that 
-		proves the correctness of 
-		\texttt{checker}:
-		\begin{align*}
-			\texttt{checker\_correct :} 
-			\forall\ (f : \texttt{form})\ 
-			(t : \texttt{T})\ 
-			(\mathbb{I} : \texttt{interp}),\ 
-			\texttt{checker}\ f\ t\ = 
-			\texttt{true} \to \\
-			\mathbb{I}(f) = 
-			\texttt{true}
-		\end{align*}
-	\end{itemize}
-	The reflection principle allows
-	us to use \texttt{checker}, which 
-	is computationally heavy, to 
-	produce proofs of formulas. For any
-	formula $f$, SMT proof $t$, and
-	interpretation $\mathbb{I}$,
-	the proof of $\mathbb{I}(f) = 
-	\texttt{true}$ is simply:
-	\begin{center}
-		$\texttt{checker\_correct}\ \ 
-		f\ \ t\ \ \mathbb{I}\ \ 
-		(\texttt{refl\_equal}\ \ 
-		(\texttt{checker}\ f\ t)\ \ 
-		\texttt{true})$
-	\end{center}
-	where \texttt{refl\_equal} 
-	(reflexivity of equality) is a tactic
-	that forces the Coq type checker to 
-	perform an equality check between 
-	$\texttt{checker}\ f\ t$ and \texttt{true}
-	by reduction. The only difference 
-	in each invocation of the reflection 
-	principle is the checking 
-	done by \texttt{checker}. The 
-	\texttt{refl\_equal} calls the 
-	checker and puts the burden of the 
-	proof on Coq's reduction mechanism
-	to reduce $\texttt{checker}\ f\ t$
-	to \texttt{true}. Since proofs from 
-	SMT solvers can be quite large, their
-	reduction by \texttt{checker} may
-	include non-trivial computations.
-	
-	\subsection{Deep and Shallow Embeddings}
-	In the following, we present 
-	a simplified version of SMTCoq's 
-	deep embedding. The actual embedding 
-	uses Coq's machine integers to 
-	implement sharing of terms and 
-	optimize space, but an unoptimized 
-	and simpler version is presented 
-	below. 
-	
-	\texttt{form} is the type of 
-	formulas:
-	\begin{minted}{coq}
-Inductive form : Type :=
-	| Fatom (_ : atom)
-	| Ftrue
-	| Ffalse
-	| Fnot (_ : form)
-	| Fand (_ : array form)
-	| For (_ : array form)
-	| Fimp (_ : array form)
-	| Fxor (_ _ : form)
-	| Fiff (_ _ : form)
-	| Fite (_ _ _ : form)
-	\end{minted}
-	where a formula can be an atom, 
-	\texttt{true}, \texttt{false};
-	a negation of a formula; a 
-	conjunction, disjunction, or 
-	implication of two or more 
-	formulas; an exclusive-or or
-	an equivalence of two formulas; 
-	or an if-then-else of three formulas.
-	\texttt{atom} is the type of atoms, 
-	which can be variables, 
-	constants, or applications of 
-	functions belonging to 
-	different theories.
-	
-	SMTCoq implements the \texttt{checker}
-	function as the \textit{main checker}
-	which composes the work done 
-	by various \textit{small checkers}. 
-	The main checker has the following 
-	type.
-	\begin{center}
-		\texttt{main\_checker ($input$ : 
-			form) ($proof$ : T) : bool}	
-	\end{center}
-	It checks whether proof object
-	$proof$ from the SMT solver 
-	is a proof of the deep embedding 
-	$input$, and returns \texttt{true} if 
-	it is. Specifically, \texttt{main\_checker}
-	checks whether $proof$ is a proof of 
-	the unsatisfiability of the negation 
-	of $input$, i.e., $\neg input$. This is 
-	equivalent to a proof of validity of 
-	$input$. The checking of unsatisfiability 
-	is divided into multiple \textit{steps}
-	and each step is independently checked 
-	by a small checker. Currently, there are 
-	small checkers for steps that perform 
-	resolution, conversion of formulas to 
-	conjunction normal form (CNF), SMT 
-	solver simplifications, and one for 
-	each theory: equality over 
-	uninterpreted functions (EUF), linear 
-	integer arithmetic (LIA), bit-vectors 
-	(BV), and functional arrays with 
-	extensionality (AX). Each small
-	checker simplifies the input 
-	\texttt{form} via the step it performs,
-	and the main checker ultimately checks
-	that the input is finally transformed to 
-	$\bot$ or \texttt{False} which is the 
-	simplest unsatisfiable formula.
-	The reflection principle is a proof of 
-	correctness of the main checker:
-	\begin{align*}
-		\texttt{main\_checker\_correct
-		: } &\texttt{$\forall$ 
-		$input$ $proof$ $\mathbb{I}$, 
-		main\_checker $input$ 
-		$proof$ = true}\\
-		&\texttt{$\to$ 
-		unsat $\mathbb{I}$
-		$\neg input$ = true}
-	\end{align*}
-	where $\mathbb{I}$ is the 
-	interpretation function that 
-	relates the deep formula to its 
-	corresponding shallow embedding,
-	and \texttt{(unsat $\mathbb{I}$ $f$)} 
-	returns \texttt{true} if 
-	$\mathbb{I}(f)$ is unsatisfiable. 
-	Thus, \texttt{unsat} specifies 
-	the validity of $input$ 
-	(or the unsatisfiability of its 
-	negation) in the shallow 
-	embedding. Since each small
-	checker modifies $input$, 
-	there is a similar correctness 
-	proof for each small checker 
-	that guarantees that they don't
-	change the unsatisfiability of 
-	$input$ during this process, and 
-	\texttt{main\_checker\_correct}
-	is composed of the correctness
-	proofs of the small checkers.
-	
-	The checker is \textit{sound} ---
-	when it returns \texttt{true} for 
-	a formula, it is valid and its 
-	negation is unsatisfiable --- but 
-	not \textit{complete} --- when it 
-	returns \texttt{false}, we can't be 
-	certain that the formula isn't valid
-	or that its negation is satisfiable.
-	This is because, the underlying SMT 
-	solver 
-	cannot decide certain formulas -
-	given a formula, it could either 
-	return \texttt{sat} 
-	(satisfiable), \texttt{unsat} 
-	(unsatisfiable), or 
-	\texttt{unknown} (`don't know').
-
+	\subsection{Reflection Lemma}
+	\label{sec:refl}
+	The process of computational 
+	reflection relies heavily on 
+	Coq's \textit{conversion rule}.
+	Coq's Calculus of Inductive 
+	Constructions (CIC) is a 
+	$\lambda-$calculus that has a 
+	reduction mechanism for terms. The
+	reduction rules form a strongly 
+	normalizing system. The calculus's
+	conversion rule allows a term to 
+	have multiple types, as long as the 
+	types have the same normal forms. For 
+	instance, for some predicate $P$ 
+	over natural numbers, a term that 
+	has type $P(10)$ also has type 
+	$P(5*2)$ and $P(20-10)$. Due 
+	to the conversion rule, 
+	computations can be used in Coq's 
+	reasoning and proof terms can be 
+	found simply by computing normal 
+	forms of types.
 	
 \section{Sledgehammer}
 \label{sec:hammer}
