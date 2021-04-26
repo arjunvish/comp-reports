@@ -105,6 +105,7 @@
 \label{sec:prelims}
 	First-order logic\\
 	Clauses as sets\\
+	Coq lists [] and coq arrays \{\}.
 
 \section{SMTCoq}
 \label{sec:smtcoq}
@@ -122,7 +123,7 @@
 			a Boolean formula $F$:
 			\begin{minted}{Coq}
 Theorem F : forall (a b c : bool), (b && negb c) || 
-  (a && negb b) || negb a || c.
+  (a && negb b) || negb a || c = true.
 Proof.
   smt.
 			\end{minted}
@@ -179,7 +180,7 @@ Proof.
 			completed in Coq:
 			\begin{minted}{Coq}
 Theorem F : forall (a b c : bool), (b && negb c) || 
-  (a && negb b) || negb a || c.
+  (a && negb b) || negb a || c = true.
 Proof.
   smt.
 Qed.
@@ -371,6 +372,14 @@ Qed.
 	(satisfiable), \texttt{unsat} 
 	(unsatisfiable), or 
 	\texttt{unknown} (`don't know').
+	Additionally, SMTCoq only works for 
+	quantifier-free SMT logics. The 
+	SMT theories it currently supports 
+	are the theories of equality over
+	uninterpreted functions (EUF), 
+	liniear integer arithmetic (LIA),
+	bit-vectors (BV), and arrays with
+	extensionality (AX).
 	
 	\subsection{Checker}
 	\label{sec:checker}
@@ -412,43 +421,132 @@ Inductive form : Type :=
 	formulas; an exclusive-or or
 	an equivalence of two formulas; 
 	or an if-then-else of three formulas.
-	\texttt{atom} is the type of atoms, 
-	which can be variables, 
-	constants, or applications of 
-	functions belonging to 
-	different theories.
+	\texttt{atom} is the type of atoms
+	or terms:
+	\begin{minted}{Coq}
+Inductive atom : Type :=
+ | AppInt (_ : op) (_: list atom)
+ | AppUnint (_ : int) (_: list atom).	
+	\end{minted} 
+	which can be applications of 
+	either interpreted functions 
+	(from a theory) or uninterpreted
+	functions to 0 (constants) or more 
+	terms. Uninterpreted constants 
+	are parameterized by machine 
+	integers while interpreted ones 
+	are encoded as follows:
+	\begin{minted}{Coq}
+Inductive op : Type :=
+ | Zcst (_ : Z) | Zle | Zlt | Zplus | ...
+ | Eq (_ : type).
+	\end{minted}
+	Some of the interpreted integer 
+	functions are shown in \texttt{op}.
+	Similarly, there are interpreted 
+	functions from each theory.
+	Some examples of atoms are 
+	\begin{itemize}
+		\item \texttt{AppUnint 0 [AppUnint 
+			1 []]} for the term $f(x)$ where 
+			$f$ has index $0$, and $x$ has 
+			index $1$; 
+		\item \texttt{AppInt Zplus [(AppInt 
+			(Zcst 5) []); (AppUnint 2 [])]} 
+			for the term $5 + y$ where $y$ 
+			has index $2$.
+		\item Recursively, \texttt{AppUnint 
+			1 []} for $x$.
+		\item Recursively, \texttt{AppUnint 
+			2 []} for $y$.
+	\end{itemize}
+	Finally, for convenience of representing 
+	CNF formulas in SMTCoq, a \texttt{clause} 
+	data structure encodes a disjunction of 
+	literals as a list of its constituents 
+	and a \texttt{state} represents the entire 
+	formula in CNF as an array of the 
+	respective conjuncts. Thus, the deep 
+	embedding of formula $F$ from our running 
+	example, is the encoding of the set 
+	$\{\neg b \lor c, \neg a \lor b, a, 
+	\neg c\}$ from step 2.2 of~\cite{fig:smtex} 
+	as the following \texttt{state}:
+	\begin{align*}
+		\{&\texttt{[Fnot Fatom (AppUnint 1 []); 
+				  Fatom (AppUnint 2 [])],} &(*\ \neg b \lor c\ *)\\
+		  &\texttt{[Fnot Fatom (AppUnint 0 []);
+				  Fatom (AppUnint 1 [])],} &(*\ \neg a \lor b\ *)\\
+		  &\texttt{[Fatom (AppUnint 0 [])],
+				  [Fnot Fatom (AppUnint 2 [])]}\} &(*\ a, \neg c\ *)  
+	\end{align*}
+	where $a, b,$ and $c$ are indexed as 
+	$0, 1,$ and $2$.
 	
-	 solvers prove formulas over 
-	sorted (typed) terms and these 
-	sorts correspond to types in 
-	Coq that are specified in the 
-	Coq standard library. Terms of 
-	these library types represent a 
-	shallow embedding of SMT 
-	terms within Coq and SMTCoq is used 
-	to prove Coq propositions over such 
-	shallow terms. Examples are the 
-	Coq library for integers or 
-	the $\mathbb{Z}$ type~\cite{CoqZ},
-	and the one for Booleans or the 
-	\texttt{bool} type~\cite{CoqBool}.
-	The deep embedding of SMT terms 
-	in Coq uses Coq's inductive types,
-	machine integers and arrays. In 
-	addition to the other benefits 
-	of reflection mentioned below,
-	the choice of machine integers 
-	and arrays contribute to 
-	efficient storage of large 
-	SMT proofs. Deep terms are harder 
-	to specify, since features such as 
-	binders 
-	and variable substitution must be 
-	handled by writing functions 
-	for these within Coq. These 
-	features are available as part 
-	of Coq's standard library 
-	for shallow terms.
+	The checker inputs a formula in its 
+	deep embedding, and a proof of the 
+	formula from the SMT solver, and 
+	returns \texttt{true} if the proof 
+	proves the formula, and 
+	\texttt{false} otherwise:
+	\begin{center}
+		\texttt{main\_checker (f : 
+			form) (t : T) : bool}	
+	\end{center}
+	Although all SMT solvers provide a
+	refutation tree as a proof as in 
+	step 2.3 of Fig.~\cite{fig:smtex},
+	their proof formats vary. CVC4 
+	uses LFSC which is a meta-logic
+	that allows the specifying of 
+	proof calculi that have declarative
+	rules with computational components 
+	called side conditions, and veriT
+	uses a proof language similar to 
+	SMTLIB. SMTCoq has its own proof 
+	certificate format for SMT solver 
+	proofs and it translates proofs 
+	from all formats to this format, 
+	and \texttt{T} is the type of 
+	these certificates that are 
+	checked by the checker. 
+	The shallow embedding of formulas in 
+	Coq uses types from the 
+	Coq standard library along with 
+	some custom types. Formulas have a 
+	Boolean type, as specified by 
+	the \texttt{bool} 
+	library~\cite{CoqBool}. The 
+	$\mathbb{Z}$ type~\cite{CoqZ}
+	from the standard library encodes 
+	integer. Additionally, SMTCoq 
+	defines its own libraries for 
+	bit-vectors and arrays. The shallow 
+	embedding for our running example 
+	is the formula from the lemma we 
+	are trying to prove in Coq
+	(Step 1 of fig.~\cite{smtcoqex}):
+	\begin{center}
+		\texttt{(b \&\& negb c) || (a 
+			\&\& negb b) || negb a || c}
+	\end{center}
+	 
+	and thus we consider an instantiated
+	version of this. SMTCoq deals only 
+	with an effectively quantifier-free
+	fragment of the SMT solver's logic.
+	Even though quantifiers appear in the 
+	theorem in Coq (Step 1 of 
+	fig.~\cite{smtcoqex}), because
+	of the structure of universal 
+	quantification where all the variables
+	are quantified only in the beginning 
+	of the formula, it is straightforward
+	to instantiate away the quantifiers
+	while negating the formula, and thus
+	it suffices to consider the 
+	unquantified version of the deep 
+	embedding.
 	
 	\subsection{Reflection Lemma}
 	\label{sec:refl}
