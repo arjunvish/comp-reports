@@ -38,8 +38,8 @@
 	(ATPs) with interactive theorem 
 	provers (ITPs). We will particularly
 	focus on the ATP category of 
-	satisfiability modulo theories or 
-	SMT solvers. ITPs are highly 
+	satisfiability modulo theories (SMT) 
+	solvers. ITPs are highly 
 	reliable tools with a small proof kernel. 
 	They require the user to write elaborate 
 	proofs to formalize properties, and 
@@ -54,19 +54,18 @@
 	lack of a small, verifiable kernel, 
 	are susceptible to bugs. Thus, in a 
 	collaboration with an SMT 
-	solver, an ITPs trust-base would be 
+	solver, an ITP's trust-base would be 
 	extended to include the solver's. To 
 	avoid compromising the proof kernel of 
-	the ITPs, SMT solvers can 
+	the ITP, SMT solvers can 
 	produce proofs of their results. 
 	We explore how proof producing 
 	SMT solvers can guide ITPs in 
 	finding proofs for formulas - 
 	a process called \textit{proof 
-	search}. To use SMT solvers in the
-	automation of proof search in 
-	ITPs, the proof object from the SMT 
-	solver guides the proof search 
+	search}. To assist ITPs in automation
+	of proof search, the proof object from 
+	the SMT solver guides the proof search 
 	in the ITP via a process called
 	\textit{proof reconstruction}.
 	Reconstruction can be implemented 
@@ -88,7 +87,7 @@
 	\textit{computational reflection}.
 	Here, the SMT solver's logic is 
 	embedded in Coq's logic, and then 
-	a proof of the SMT solver is 
+	a proof from the SMT solver is 
 	directly used to obtain the 
 	proof of a formula in Coq. 
 	While this reduces the 
@@ -138,7 +137,7 @@ Proof.
 				\textsc{Step 2}: SMT solver 
 				proves $F$ and returns proof 
 				\texttt{t}. This step is 
-				expanded in Fig.~\cite{fig:smtex}
+				expanded in Fig.~\ref{fig:smtex}
 			\end{center}
 		\end{framed}
 		
@@ -148,8 +147,9 @@ Proof.
 		
 		\begin{framed}
 			\textsc{Step 3}: SMT Coq's checker 
-			checks deep embedding of $F$ 
-			(\texttt{f}) against proof \texttt{t}:
+			checks deep embedding of $F$, 
+			\texttt{f}, against proof 
+			\texttt{t}:
 			\begin{center}
 				\texttt{checker f t = true}
 			\end{center}
@@ -165,9 +165,8 @@ Proof.
 			embedding $\mathbb{I}(\texttt{f})$:
 			\begin{center}
 				\texttt{checker\_correct f t 
-					$\mathbb{I}$
-					(refl\_equal (checker f t) 
-					true)}
+					(refl\_equal (checker 
+					f t) true)}
 			\end{center}
 		\end{framed}
 		
@@ -203,11 +202,12 @@ Qed.
 	Coq's trust-base, SMTCoq requires the 
 	solvers to be proof-producing, and uses 
 	Coq's computational capabilities 
-	to lift these up to Coq proofs, in a 
-	process called computational 
+	to lift their proofs up to Coq proofs, 
+	in a process called computational 
 	reflection. This is illustrated in 
-	Fig.~\cite{fig:smtcoqex} using an 
-	example.
+	Fig.~\ref{fig:smtcoqex} using a 
+	running example that is elaborated 
+	in the rest of the section.
 
 	\begin{figure}[t]
 		\begin{framed}
@@ -287,9 +287,9 @@ Qed.
 	negation of the input formula) at
 	the leaves and the empty clause
 	at the root. The role of the SMT
-	solver from Fig.~\cite{fig:smtcoqex}
-	is elaborated in Fig.~\cite{fig:smtex}.
-	The SMT solver's proof format is 
+	solver from Fig.~\ref{fig:smtcoqex}
+	is elaborated in Fig.~\ref{fig:smtex}.
+	The SMT solver's proof creation is 
 	detailed in Report 3.
 	
 	SMTCoq implements a checker for 
@@ -305,12 +305,12 @@ Qed.
 	reflection:
 	\begin{itemize}
 		\item \textit{Shallow Embedding: }
-		Use types and terms in B that 
+		Use types and terms of B that 
 		correspond to those of A, to 
 		represent terms of A. A shallow
 		embedding of SMT formulas in 
 		Coq is Coq's \texttt{bool} 
-		type of Boolean types.
+		type of Booleans.
 		\item\textit{Deep Embedding: }
 		Define custom types in B that 
 		correspond to those of A, and 
@@ -321,7 +321,7 @@ Qed.
 		is defined as the type 
 		\texttt{form} in SMT solvers.
 		\texttt{f} from 
-		Fig.~\cite{fig:smtcoqex} has
+		Fig.~\ref{fig:smtcoqex} has
 		type \texttt{form}.
 	\end{itemize}
 
@@ -334,24 +334,27 @@ Qed.
 	embedding. This is done via a 
 	correctness lemma for the checker
 	(also called the reflection principle),
-	which is a proof that for any 
+	which proves that for any 
 	formula in the deep embedding, if 
 	the checker is able to check an SMT
 	proof against it, then the formula in 
 	the shallow embedding is true. A 
 	proof of $F$ in the shallow 
-	embedding is just an instantiation of 
+	embedding is obtained by instantiating 
 	the correctness lemma with $F$.
 	Step 4 shows the instantiation of 
 	the reflection principle with 
 	the right objects to obtain the 
 	proof of our example formula 
-	from Fig.~\cite{fig:smtcoqex}. 
-	The interpretation function 
+	from Fig.~\ref{fig:smtcoqex}. 
+	The interpretation function
 	$\mathbb{I}$ transforms 
 	formulas in the deep embedding
-	to their shallow embeddings,
-	and so $\mathbb{I}(\texttt{f})$
+	to their shallow embeddings
+	given a valuation of the free 
+	variables $\nu$, so 
+	$\forall\ \nu,\ 
+	\mathbb{I}_{\nu}(\texttt{f})$
 	is exactly the proof required 
 	to close theorem $\texttt{F}$
 	in Coq. The reflection principle 
@@ -361,7 +364,7 @@ Qed.
 	when it proves a formula in Coq, the 
 	formula is valid and thus the proof
 	can be closed (using \texttt{Qed.},
-	as in Fig.~\cite{fig:smtcoqex}), but 
+	as in Fig.~\ref{fig:smtcoqex}), but 
 	not \textit{complete} --- when it 
 	fails to prove a formula, we can't 
 	be certain that the formula isn't 
@@ -420,18 +423,18 @@ Inductive form : Type :=
 	implication of two or more 
 	formulas; an exclusive-or or
 	an equivalence of two formulas; 
-	or an if-then-else of three formulas.
+	or, an if-then-else of three formulas.
 	\texttt{atom} is the type of atoms
 	or terms:
 	\begin{minted}{Coq}
 Inductive atom : Type :=
- | AppInt (_ : op) (_: list atom)
- | AppUnint (_ : int) (_: list atom).	
+ | AppIntr (_ : op) (_: list atom)
+ | AppUnintr (_ : int) (_: list atom).	
 	\end{minted} 
 	which can be applications of 
 	either interpreted functions 
 	(from a theory) or uninterpreted
-	functions to 0 (constants) or more 
+	functions to zero (constants) or more 
 	terms. Uninterpreted constants 
 	are parameterized by machine 
 	integers while interpreted ones 
@@ -447,18 +450,19 @@ Inductive op : Type :=
 	functions from each theory.
 	Some examples of atoms are 
 	\begin{itemize}
-		\item \texttt{AppUnint 0 [AppUnint 
+		\item \texttt{AppUnintr 0 [AppUnintr 
 			1 []]} for the term $f(x)$ where 
 			$f$ has index $0$, and $x$ has 
 			index $1$; 
-		\item \texttt{AppInt Zplus [(AppInt 
-			(Zcst 5) []); (AppUnint 2 [])]} 
+		\item \texttt{AppIntr Zplus [(AppIntr 
+			(Zcst 5) []); (AppUnintr 2 [])]} 
 			for the term $5 + y$ where $y$ 
 			has index $2$.
-		\item Recursively, \texttt{AppUnint 
+		\item Recursively, from the previous example,
+			\texttt{AppUnint 
 			1 []} for $x$.
-		\item Recursively, \texttt{AppUnint 
-			2 []} for $y$.
+		\item Recursively, from the previous example,
+			\texttt{AppUnint 2 []} for $y$.
 	\end{itemize}
 	Finally, for convenience of representing 
 	CNF formulas in SMTCoq, a \texttt{clause} 
@@ -470,7 +474,8 @@ Inductive op : Type :=
 	embedding of formula $F$ from our running 
 	example, is the encoding of the set 
 	$\{\neg b \lor c, \neg a \lor b, a, 
-	\neg c\}$ from step 2.2 of~\cite{fig:smtex} 
+	\neg c\}$ from step 2.2 of 
+	Fig.~\ref{fig:smtex} 
 	as the following \texttt{state}:
 	\begin{align*}
 		\{&\texttt{[Fnot Fatom (AppUnint 1 []); 
@@ -490,12 +495,13 @@ Inductive op : Type :=
 	proves the formula, and 
 	\texttt{false} otherwise:
 	\begin{center}
-		\texttt{main\_checker (f : 
+		\texttt{checker (f : 
 			form) (t : T) : bool}	
 	\end{center}
 	Although all SMT solvers provide a
-	refutation tree as a proof as in 
-	step 2.3 of Fig.~\cite{fig:smtex},
+	refutation tree as a proof as 
+	illustrated step 2.3 of 
+	Fig.~\ref{fig:smtex},
 	their proof formats vary. CVC4 
 	uses LFSC which is a meta-logic
 	that allows the specifying of 
@@ -525,7 +531,7 @@ Inductive op : Type :=
 	embedding for our running example 
 	is the formula from the lemma we 
 	are trying to prove in Coq
-	(Step 1 of fig.~\cite{smtcoqex}):
+	(Step 1 of fig.~\ref{smtcoqex}):
 	\begin{center}
 		\texttt{(b \&\& negb c) || (a 
 			\&\& negb b) || negb a || c}
@@ -537,7 +543,7 @@ Inductive op : Type :=
 	fragment of the SMT solver's logic.
 	Even though quantifiers appear in the 
 	theorem in Coq (Step 1 of 
-	fig.~\cite{smtcoqex}), because
+	fig.~\ref{smtcoqex}), because
 	of the structure of universal 
 	quantification where all the variables
 	are quantified only in the beginning 
@@ -1388,6 +1394,6 @@ Inductive op : Type :=
 		able to prove it.
 		
 \bibliographystyle{abbrv}
-\bibliography{bib2}
+\bibliography{bib2new}
 
 \end{document}

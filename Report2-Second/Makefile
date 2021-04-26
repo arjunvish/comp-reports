@@ -1,5 +1,5 @@
 all: 
-	latexmk -latexoption="-shell-escape" -pdf report2.tex
+	latexmk -latexoption="-shell-escape" -pdf report2new.tex
 
 clean:
 	latexmk -CA

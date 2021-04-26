@@ -388,9 +388,9 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 			\texttt{checker\_correct :} 
 			\forall\ (f : \texttt{form})\ 
 			(t : \texttt{T})\ 
-			(\nu : \texttt{val}),\ 
 			\texttt{checker}\ f\ t\ = 
 			\texttt{true} \to \\
+			\forall\ (\nu : \texttt{val}),\ 
 			\mathbb{I}_{\nu}(f) = 
 			\texttt{true}
 		\end{align*}
@@ -399,13 +399,13 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	us to use \texttt{checker}, which 
 	is computationally heavy, to 
 	produce proofs of formulas. For any
-	formula $f$, SMT proof $t$, and
-	valuation $\nu$,
-	the proof of $\mathbb{I}(f) = 
+	formula $f$, and SMT proof $t$ of $f$,
+	the proof of $\forall\ \nu,\ 
+	\mathbb{I}_{\nu}(f) = 
 	\texttt{true}$ is simply:
 	\begin{center}
 		$\texttt{checker\_correct}\ \ 
-		f\ \ t\ \ \nu\ \ 
+		f\ \ t\ \ 
 		(\texttt{refl\_equal}\ \ 
 		(\texttt{checker}\ f\ t)\ \ 
 		\texttt{true})$
@@ -509,10 +509,10 @@ Inductive form : Type :=
 	correctness of the main checker:
 	\begin{align*}
 		\texttt{main\_checker\_correct: } 
-		&\forall\ input\ proof\ \nu,\  
+		&\forall\ input\ proof,\   
 		\texttt{main\_checker }input\  
 		proof = \texttt{true}\\
-		&\mathbb{I}_{\nu}(f)
+		&\to \forall\ \nu,\ \mathbb{I}_{\nu}(f)
 		= \texttt{true}
 	\end{align*}
 	where $\nu$ is the valuation 
