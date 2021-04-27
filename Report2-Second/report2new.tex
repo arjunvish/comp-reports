@@ -9,8 +9,9 @@
 \usepackage{minted}
 \usepackage{stmaryrd}
 \usepackage{verbatim}
-
+\usepackage{graphicx}
 \usepackage{hyperref}
+
 \hypersetup{
  pdfborder={0 0 0},
  colorlinks=true,
@@ -499,60 +500,75 @@ Inductive op : Type :=
 			form) (t : T) : bool}	
 	\end{center}
 	Although all SMT solvers provide a
-	refutation tree as a proof as 
+	refutation tree as a proof, as 
 	illustrated step 2.3 of 
 	Fig.~\ref{fig:smtex},
-	their proof formats vary. CVC4 
-	uses LFSC which is a meta-logic
-	that allows the specifying of 
-	proof calculi that have declarative
-	rules with computational components 
-	called side conditions, and veriT
-	uses a proof language similar to 
-	SMTLIB. SMTCoq has its own proof 
-	certificate format for SMT solver 
-	proofs and it translates proofs 
+	their proof formats vary. CVC4 uses 
+	LFSC~\cite{DBLP:journals/fmsd/StumpORHT13}
+	which is a meta-logic that allows the 
+	specifying of proof calculi that have 
+	declarative	rules with computational 
+	components called side conditions, and 
+	veriT uses a proof language similar to 
+	SMTLIB~\cite{Besson1}. SMTCoq has its 
+	own proof certificate format for SMT 
+	solver proofs and it translates proofs 
 	from all formats to this format, 
 	and \texttt{T} is the type of 
 	these certificates that are 
 	checked by the checker. 
-	The shallow embedding of formulas in 
-	Coq uses types from the 
-	Coq standard library along with 
-	some custom types. Formulas have a 
-	Boolean type, as specified by 
-	the \texttt{bool} 
-	library~\cite{CoqBool}. The 
-	$\mathbb{Z}$ type~\cite{CoqZ}
-	from the standard library encodes 
-	integer. Additionally, SMTCoq 
-	defines its own libraries for 
-	bit-vectors and arrays. The shallow 
-	embedding for our running example 
-	is the formula from the lemma we 
-	are trying to prove in Coq
-	(Step 1 of fig.~\ref{smtcoqex}):
+	
+	\begin{figure}[t]
 	\begin{center}
-		\texttt{(b \&\& negb c) || (a 
-			\&\& negb b) || negb a || c}
+	\includegraphics[scale=0.3]{checker}
+		\caption{SMTCoq's \texttt{checker}
+		shown as the "Main checker" which 
+		interacts with various small checkers.}
+		\label{fig:checker}
 	\end{center}
-	 
-	and thus we consider an instantiated
-	version of this. SMTCoq deals only 
-	with an effectively quantifier-free
-	fragment of the SMT solver's logic.
-	Even though quantifiers appear in the 
-	theorem in Coq (Step 1 of 
-	fig.~\ref{smtcoqex}), because
-	of the structure of universal 
-	quantification where all the variables
-	are quantified only in the beginning 
-	of the formula, it is straightforward
-	to instantiate away the quantifiers
-	while negating the formula, and thus
-	it suffices to consider the 
-	unquantified version of the deep 
-	embedding.
+	\end{figure}
+		
+	To prove the unsatisfiability of a 
+	formula, the SMT solver operates in 
+	phases. It converts the formula into
+	CNF and performs some simplications
+	on it. It then abstracts any theory
+	literals into propositional ones 
+	and tries to satisfy the abstraction 
+	using the SAT solver; it does this
+	in a cycle where the theory
+	solvers give feedback
+	by adding the negation of the 
+	satisfying model to the 
+	abstraction of the formula if the 
+	refinement of the model isn't 
+	satisfied by a theory. 
+	Each of these phases constitute
+	\textit{steps} of the SMT proof
+	that SMTCoq has to check. A step
+	can modify the current 
+	\texttt{state} (representation of 
+	the formula) while maintaining 
+	its (un)satisfiability. If the 
+	initial formula is unsatisfiable, 
+	then after running all steps,
+	the final \texttt{state} is the 
+	empty clause $\bot$. Currently, 
+	SMTCoq has steps that perform 
+	resolution, conversion of formulas 
+	to conjunction normal form (CNF), SMT 
+	solver simplifications, and one for 
+	each theory. Each step is 
+	independently checked by a small 
+	checker. Each small
+	checker simplifies the  
+	\texttt{state} via the step it 
+	performs, and the main checker 
+	ultimately checks that the input is 
+	finally transformed to $\bot$. The 
+	architecture of the checker is 
+	illustrated in
+	Fig.~\ref{fig:checker}.
 	
 	\subsection{Reflection Lemma}
 	\label{sec:refl}
@@ -577,6 +593,42 @@ Inductive op : Type :=
 	reasoning and proof terms can be 
 	found simply by computing normal 
 	forms of types.
+	
+	The shallow embedding of formulas in 
+	Coq uses types from the 
+	Coq standard library along with 
+	some custom types. Formulas have a 
+	Boolean type, as specified by 
+	the \texttt{bool} 
+	library~\cite{CoqBool}. The 
+	$\mathbb{Z}$ type~\cite{CoqZ}
+	from the standard library encodes 
+	integer. Additionally, SMTCoq 
+	defines its own libraries for 
+	bit-vectors and arrays. The shallow 
+	embedding for our running example 
+	is the formula from the lemma we 
+	are trying to prove in Coq
+	(Step 1 of fig.~\ref{fig:smtcoqex}):
+	\begin{center}
+		\texttt{(b \&\& negb c) || (a 
+			\&\& negb b) || negb a || c}
+	\end{center}	 
+	and thus we consider an instantiated
+	version of this. SMTCoq deals only 
+	with an effectively quantifier-free
+	fragment of the SMT solver's logic.
+	Even though quantifiers appear in the 
+	theorem in Coq (Step 1 of 
+	fig.~\ref{fig:smtcoqex}), because
+	of the structure of universal 
+	quantification where all the variables
+	are quantified only in the beginning 
+	of the formula, it is straightforward
+	to instantiate away the quantifiers
+	while negating the formula, and thus
+	it suffices to consider the 
+	unquantified version.
 	
 \section{Sledgehammer}
 \label{sec:hammer}
