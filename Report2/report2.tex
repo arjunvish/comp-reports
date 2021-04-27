@@ -346,52 +346,54 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	In Coq, we have 
 	\begin{itemize}
 		\item \texttt{form} --- a data 
-		structure representing the deep 
-		embedding of SMT formulas
+			structure representing the 
+			deep embedding of SMT formulas
 		\item \texttt{bool} --- the 
-		Boolean type in Coq 
-		representing the shallow 
-		embedding of SMT formulas
+			Boolean type in Coq 
+			representing the shallow 
+			embedding of SMT formulas
 		\item $\mathbb{I}$ --- the 
-		interpretation function, which 
-		is a Boolean predicate over 
-		\texttt{form}s and 
-		valuations of free variables 
-		(of type 
-		\texttt{form} $\to$ \texttt{val}
-		$\to$ \texttt{bool}). The interpretation
-		function provides a fixed 
-		interpretation of types, and 
-		terms modulo free variables. The 
-		interpretation
-		of terms uses a valuation function
-		$\nu$ that interprets 
-		free variables. The interpretation
-		of a formula \texttt{f} for a 
-		valuation $\nu$ is specified as 
-		$\mathbb{I}_{\nu}(\texttt{f})$.
+			interpretation function, which 
+			is a Boolean predicate over 
+			\texttt{form}s and 
+			valuations of free variables 
+			(of type 
+			\texttt{form} $\to$ \texttt{val}
+			$\to$ \texttt{bool}). The 
+			interpretation function provides 
+			a fixed interpretation of types, 
+			and	terms modulo free variables. 
+			The interpretation of terms uses 
+			a valuation function $\nu$ that 
+			interprets free variables. The 
+			interpretation of a formula 
+			\texttt{f} for a valuation $\nu$ 
+			is specified as $\mathbb{I}_{\nu}
+			(\texttt{f})$.
 		\item \texttt{T} --- the type of 
-		proof objects from the SMT solver
+			proof objects from the SMT 
+			solver
 	\end{itemize}
 	Reflection requires the following:
 	\begin{itemize}
 		\item a function 
 		\texttt{checker : form $\to$ T $\to$ 
 		bool} implemented in Coq such that 
-		\texttt{checker}$\ f\ t$ is 
-		\texttt{true} if proof object $t$
-		justifies $f$
+		\texttt{checker f t} is 
+		\texttt{true} if proof object 
+		\texttt{t} justifies the 
+		unsatisfiability of \texttt{f}
+		(and as a consequence, the 
+		validity of \texttt{$\neg$f}).
 		\item the reflection principle, that 
 		proves the correctness of 
 		\texttt{checker}:
 		\begin{align*}
 			\texttt{checker\_correct :} 
-			\forall\ (f : \texttt{form})\ 
-			(t : \texttt{T})\ 
-			\texttt{checker}\ f\ t\ = 
-			\texttt{true} \to \\
+			\forall\ \texttt{(f : form)
+			(t : T) checker $\neg$f t = true} \to \\
 			\forall\ (\nu : \texttt{val}),\ 
-			\mathbb{I}_{\nu}(f) = 
+			\mathbb{I}_{\nu}(\texttt{f}) = 
 			\texttt{true}
 		\end{align*}
 	\end{itemize}
@@ -399,30 +401,28 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	us to use \texttt{checker}, which 
 	is computationally heavy, to 
 	produce proofs of formulas. For any
-	formula $f$, and SMT proof $t$ of $f$,
+	formula \texttt{f}, and SMT proof 
+	\texttt{t} of \texttt{f},
 	the proof of $\forall\ \nu,\ 
-	\mathbb{I}_{\nu}(f) = 
+	\mathbb{I}_{\nu}(\texttt{f}) = 
 	\texttt{true}$ is simply:
 	\begin{center}
-		$\texttt{checker\_correct}\ \ 
-		f\ \ t\ \ 
-		(\texttt{refl\_equal}\ \ 
-		(\texttt{checker}\ f\ t)\ \ 
-		\texttt{true})$
+		$\texttt{checker\_correct f t
+		(refl\_equal (checker $\neg$f t) true)}$
 	\end{center}
 	where \texttt{refl\_equal} 
 	(reflexivity of equality) is a tactic
 	that forces the Coq type checker to 
 	perform an equality check between 
-	$\texttt{checker}\ f\ t$ and \texttt{true}
-	by reduction. The only difference 
-	in each invocation of the reflection 
-	principle is the checking 
-	done by \texttt{checker}. The 
+	$\texttt{checker $\neg$f t}$ and 
+	\texttt{true} by reduction. The only 
+	difference in each invocation of the 
+	reflection principle is the checking 
+	done by \texttt{checker}.
 	\texttt{refl\_equal} calls the 
 	checker and puts the burden of the 
 	proof on Coq's reduction mechanism
-	to reduce $\texttt{checker}\ f\ t$
+	to reduce $\texttt{checker $\neg$f t}$
 	to \texttt{true}. Since proofs from 
 	SMT solvers can be quite large, their
 	reduction by \texttt{checker} may
@@ -474,20 +474,21 @@ Inductive form : Type :=
 	The main checker has the following 
 	type.
 	\begin{center}
-		\texttt{main\_checker ($input$ : 
-			form) ($proof$ : T) : bool}	
+		\texttt{main\_checker : 
+			form $\to$ T $\to$ bool}	
 	\end{center}
-	It checks whether proof object
-	$proof$ from the SMT solver 
-	is a proof of the deep embedding 
-	$input$, and returns \texttt{true} if 
-	it is. Specifically, \texttt{main\_checker}
-	checks whether $proof$ is a proof of 
-	the unsatisfiability of the negation 
-	of $input$, i.e., $\neg input$. This is 
+	Given deep embedding \texttt{f} of 
+	type \texttt{form}
+	and proof object \texttt{t} of type 
+	\texttt{T}, it checks whether \texttt{t} 
+	from the SMT solver 
+	is a proof of the unsatisfiability of
+	\texttt{$\neg$f}, and returns 
+	\texttt{true} if it is. This is 
 	equivalent to a proof of validity of 
-	$input$. The checking of unsatisfiability 
-	is divided into multiple \textit{steps}
+	\texttt{f}. The checking of 
+	unsatisfiability is divided into 
+	multiple \textit{steps}
 	and each step is independently checked 
 	by a small checker. Currently, there are 
 	small checkers for steps that perform 
@@ -499,21 +500,20 @@ Inductive form : Type :=
 	integer arithmetic (LIA), bit-vectors 
 	(BV), and functional arrays with 
 	extensionality (AX). Each small
-	checker simplifies the input 
-	\texttt{form} via the step it performs,
-	and the main checker ultimately checks
-	that the input is finally transformed to 
+	checker simplifies \texttt{f} via 
+	the step it performs, and the main 
+	checker ultimately checks that the 
+	input is finally transformed to 
 	$\bot$ or \texttt{False} which is the 
 	simplest unsatisfiable formula.
 	The reflection principle is a proof of 
 	correctness of the main checker:
 	\begin{align*}
 		\texttt{main\_checker\_correct: } 
-		&\forall\ input\ proof,\   
-		\texttt{main\_checker }input\  
-		proof = \texttt{true}\\
-		&\to \forall\ \nu,\ \mathbb{I}_{\nu}(f)
-		= \texttt{true}
+		&\forall\ \texttt{f t},\ 
+		\texttt{main\_checker $\neg$f t = true}\\
+		&\to \forall\ \nu,\ \mathbb{I}_{\nu}
+		(\texttt{f}) = \texttt{true}
 	\end{align*}
 	where $\nu$ is the valuation 
 	of free variables used by 
@@ -530,12 +530,13 @@ Inductive form : Type :=
 	it proves the validity of the 
 	formula (it is true for any 
 	model). Since each small
-	checker modifies $input$, 
+	checker modifies \texttt{f}, 
 	there is a similar correctness 
 	proof for each small checker 
-	that guarantees that they don't
+	that guarantees that it doesn't
 	change the unsatisfiability of 
-	$input$ during this process, and 
+	\texttt{f} during this process, 
+	and the proof of 
 	\texttt{main\_checker\_correct}
 	is composed of the correctness
 	proofs of the small checkers.
