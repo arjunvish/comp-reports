@@ -382,16 +382,16 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 		\texttt{checker f t} is 
 		\texttt{true} if proof object 
 		\texttt{t} justifies the 
-		unsatisfiability of \texttt{f}
+		unsatisfiability of \texttt{$\neg$f}
 		(and as a consequence, the 
-		validity of \texttt{$\neg$f}).
+		validity of \texttt{f}).
 		\item the reflection principle, that 
 		proves the correctness of 
 		\texttt{checker}:
 		\begin{align*}
 			\texttt{checker\_correct :} 
 			\forall\ \texttt{(f : form)
-			(t : T) checker $\neg$f t = true} \to \\
+			(t : T) checker f t = true} \to \\
 			\forall\ (\nu : \texttt{val}),\ 
 			\mathbb{I}_{\nu}(\texttt{f}) = 
 			\texttt{true}
@@ -408,13 +408,13 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	\texttt{true}$ is simply:
 	\begin{center}
 		$\texttt{checker\_correct f t
-		(refl\_equal (checker $\neg$f t) true)}$
+		(refl\_equal (checker f t) true)}$
 	\end{center}
 	where \texttt{refl\_equal} 
 	(reflexivity of equality) is a tactic
 	that forces the Coq type checker to 
 	perform an equality check between 
-	$\texttt{checker $\neg$f t}$ and 
+	$\texttt{checker f t}$ and 
 	\texttt{true} by reduction. The only 
 	difference in each invocation of the 
 	reflection principle is the checking 
@@ -422,7 +422,7 @@ Lemma PropForm : forall (a b : Prop), a -> a \/ b.
 	\texttt{refl\_equal} calls the 
 	checker and puts the burden of the 
 	proof on Coq's reduction mechanism
-	to reduce $\texttt{checker $\neg$f t}$
+	to reduce $\texttt{checker f t}$
 	to \texttt{true}. Since proofs from 
 	SMT solvers can be quite large, their
 	reduction by \texttt{checker} may
@@ -511,7 +511,7 @@ Inductive form : Type :=
 	\begin{align*}
 		\texttt{main\_checker\_correct: } 
 		&\forall\ \texttt{f t},\ 
-		\texttt{main\_checker $\neg$f t = true}\\
+		\texttt{main\_checker f t = true}\\
 		&\to \forall\ \nu,\ \mathbb{I}_{\nu}
 		(\texttt{f}) = \texttt{true}
 	\end{align*}
@@ -534,8 +534,8 @@ Inductive form : Type :=
 	there is a similar correctness 
 	proof for each small checker 
 	that guarantees that it doesn't
-	change the unsatisfiability of 
-	\texttt{f} during this process, 
+	change the (un)satisfiability of 
+	\texttt{$\neg$f} during this process, 
 	and the proof of 
 	\texttt{main\_checker\_correct}
 	is composed of the correctness

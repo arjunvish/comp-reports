@@ -496,10 +496,18 @@ Inductive op : Type :=
 	proves the formula, and 
 	\texttt{false} otherwise:
 	\begin{center}
-		\texttt{checker (f : 
-			form) (t : T) : bool}	
+		\texttt{checker : form 
+			$\to$ T $\to$ bool}	
 	\end{center}
-	Although all SMT solvers provide a
+	More specifically, given deep embedding 
+	\texttt{f} of type \texttt{form}
+	and proof object \texttt{t} of type 
+	\texttt{T}, it checks whether \texttt{t} 
+	from the SMT solver is a proof of the 
+	unsatisfiability of	\texttt{$\neg$f}, and 
+	returns \texttt{true} if it is. 
+	Although all SMT solvers (that 
+	interface with SMTCoq) provide a
 	refutation tree as a proof, as 
 	illustrated step 2.3 of 
 	Fig.~\ref{fig:smtex},
@@ -568,12 +576,77 @@ Inductive op : Type :=
 	finally transformed to $\bot$. The 
 	architecture of the checker is 
 	illustrated in
-	Fig.~\ref{fig:checker}.
+	Fig.~\ref{fig:checker}. The phases 
+	of SMT solver operation and the 
+	corresponding steps of the
+	SMT solver's proof are elaborated
+	in Report 3.
 	
 	\subsection{Reflection Lemma}
 	\label{sec:refl}
-	The process of computational 
-	reflection relies heavily on 
+	The last section describes a 
+	deep embedding of SMT formulas 
+	in Coq and a checker for 
+	proofs of these formulas (step 3 of 
+	Fig.~\ref{fig:smtcoqex}). 
+	This infrastructure alone serves 
+	as an external checker for 
+	SMT solver proofs in Coq.
+	SMTCoq, however, is able to 
+	do more than this as demonstrated
+	in steps 4 and 5. In addition 
+	to checking SMT solver proofs, 
+	it can lift these up to 
+	Boolean formulas in Coq and
+	prove such formulas automatically
+	in Coq with the assistance of 
+	the SMT solver. In principle,
+	this is done by proving the
+	correctness of \texttt{checker}
+	with respect to \texttt{Bool}
+	formulas, that is to say that 
+	for every formula (\texttt{form})
+	that \texttt{checker} is able to 
+	successfully check against its
+	proof from the SMT solver, the 
+	corresponding \texttt{Bool}
+	formula holds. The entities
+	that these deep embeddings 
+	must correspond to are the shallow
+	embeddings, and the correspondence 
+	itself is defined by the 
+	interpretation function. The 
+	shallow embedding, interpretation
+	function, and the correctness 
+	lemma are discussed in this 
+	section.
+	
+	The shallow embedding of SMT formulas
+	is Coq's \texttt{Bool} type of 
+	Booleans. The advantage of a 
+	shallow embedding in a logical 
+	framework is that it is usually 
+	a subset of the framework's language
+	and doesn't need to be defined. 
+	As in the deep embedding, Boolean
+	formulas may have atoms containing 
+	terms from the theories of 
+	equality, integers, bit-vectors,
+	and arrays. Boolean equality and
+	the Coq $\mathbb{Z}$ type of 
+	integers are sufficient to encode
+	the first two, while SMTCoq 
+	defines custom types for the 
+	bit-vectors and arrays. The 
+	examples of atoms in their 
+	deep embedding from the previous
+	section are 
+	
+	
+	As previously 
+	mentioned, the idea of computational 
+	reflection is central to this 
+	process. relies heavily on 
 	Coq's \textit{conversion rule}.
 	Coq's Calculus of Inductive 
 	Constructions (CIC) is a 
