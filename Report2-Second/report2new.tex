@@ -103,9 +103,160 @@
 	
 	\section{Preliminaries}
 	\label{sec:prelims}
-	First-order logic\\
-	Clauses as sets\\
-	Coq lists [] and coq arrays \{\}.
+	
+	In both Coq and Isabelle/HOL,
+	lists are constructed using 
+	square brackets (\texttt{[ ]})
+	and their elements are separated 
+	using semicolons (\texttt{;}). 
+	Arrays are constructed using 
+	curly braces (\texttt{\{ \}})
+	and their elements separated 
+	using commas (\texttt{,}).
+	
+	\subsection{Many-Sorted First-Order Logic}
+	\label{sec:msfol}
+	Many-sorted first-order logic extends
+	first-order logic (FOL) with 
+	types or sorts. We present the 
+	syntax in this section and the 
+	semantics are presented in
+	\cite{Barrett2018}. Syntactically, 
+	the components of MSFOL are sorts 
+	$\sigma$, terms $t$, and 
+	formulas $\phi$. Sorts are 
+	atomic entities that 
+	represent types. Function types 
+	--- ($\sigma_1$, ..., $\sigma_n$) 
+	$\to$ $\sigma$ ---
+	and relation types 
+	--- ($\sigma_1$, ..., $\sigma_m$)
+	are defined over sorts, and 
+	are types of functions and 
+	predicates below. Terms $t$ and 
+	formulas $\phi$ are specified as:
+	\begin{align*}
+	t &:= x^{\sigma}\ |\ 
+	f^{(\sigma_1, ..., \sigma_n) \to 
+		\sigma}	(t_1, ..., t_n)\\
+	\phi &:= \bot\ |\ \neg \phi\ |\ 
+	\phi_1 \land \phi_2\ |\ \forall 
+	x^{\sigma} . \phi\ |\ t_1 = t_2
+	\ |\ P^{\sigma_1,...,\sigma_m}
+	(t_1, ..., t_m)
+	\end{align*}
+	Terms are either sorted variables, 
+	or applications of functions to terms.
+	Formulas are constants or logical 
+	connectives applied to other 
+	formulas, quantified formulas, 
+	equality over terms, or predicates 
+	over terms. Connectives $\lor$, 
+	$\to$, $\leftrightarrow$, and the 
+	existential	quantifier $\exists$ 
+	can be specified using the connectives 
+	and quantifiers mentioned above.
+	
+	A \textit{literal} is a term, or a 
+	formula with no connectives other than 
+	$\neg$. A \textit{clause} is a 
+	disjunction of literals. All formulas 
+	can be converted to conjunction normal 
+	form (CNF) which is a conjunction of 
+	clauses. For ease of notation, 
+	a formula in CNF is also represented
+	as a set of clauses within curly 
+	braces. $\bot$, the formula 
+	representing Boolean false, 
+	is overloaded to also represent
+	the empty clause, which is trivially
+	unsatisfiable (unlike the empty set,
+	or the empty conjunction which is 
+	trivially satisfiable).
+	
+	Resolution is mentioned quite 
+	frequently in the document. The resolution 
+	rule simplifies two clauses 
+	to a new clause as follows:
+	\begin{center}
+		$\infer[resolution]{\phi_1 \lor ... \lor 
+			\phi_n \lor \psi_1 \lor ... \lor 
+			\psi_m}{\phi_1 \lor ... \lor \phi_n 
+			\lor \chi & \neg \chi \lor \psi_1 
+			\lor ... \lor \psi_m}$ 
+	\end{center}
+	The following is an instance of the 
+	resolution rule.
+	\begin{center}
+		$\infer{a \lor c}{a \lor \neg b 
+			& b \lor c}$
+	\end{center}
+	Given that two clauses (a clause 
+	is a disjunction of literals) hold, 
+	and a \textit{pivot}, which is a 
+	literal that occurs with opposite 
+	polarities in each clause ($b$ in 
+	the above example), the resolution 
+	rule concludes that 
+	the combination of the two clauses 
+	without either occurrence of the 
+	pivot holds.
+	
+	\subsection{Higher-Order Logic}
+	\label{sec:hol}
+	We specify the 
+	syntax of higher-order logic 
+	and delegate the explanation of 
+	semantics to a 
+	reference~\cite{10.5555/155278}. 
+	HOL consists of 
+	types $\tau$ and terms $t$. 
+	\begin{align*}
+	\tau &:= \alpha\ |\ \kappa^n\ 
+	\tau_1 ... \tau_n\\
+	t &:= x^{\tau}\ |\ c^{\tau}\ |\ t_1\ t_2\ 
+	|\ \lambda x^{\tau}.t
+	\end{align*}	
+	Types $\tau$ are either type
+	variables $\alpha$ or 
+	applications of type 
+	constructors $\kappa^n$ to 
+	$n$ types ($n$ is usually omitted). 
+	Particular types of interest are 
+	the function type --- formed by 
+	applying the arrow type constructor 
+	$\to^{2}$ to other types, the 
+	Boolean type --- $\texttt{Bool}$ 
+	(or $\texttt{Bool}^0$), the type of 
+	natural numbers --- \texttt{Nat},
+	and integers --- \texttt{Int}.
+	Note that $\texttt{Bool}$ is the 
+	type of Booleans in higher-order
+	logic (used only in 
+	Sec.~\ref{sec:hammer}), different
+	from \texttt{bool} which is the 
+	type of Booleans in Coq (used only 
+	in Sec.~\ref{sec:smtcoq}).
+	Terms are typed variables, 
+	typed constants, applications 
+	of terms to terms, or typed
+	$\lambda-$ abstractions. We have
+	the usual Boolean constants 
+	representing logical connectives
+	and quantifiers. For instance, 
+	logical negation, 
+	$\neg^{\texttt{bool} \to 
+		\texttt{bool}}$, universal 
+	quantification,
+	$\forall^{\alpha \to 
+		\texttt{bool} \to \texttt{bool}}$, 
+	and polymorphic equality,
+	$=^{\alpha \to \alpha 
+		\to \texttt{bool}}$. Type 
+	annotations for terms are also 
+	often omitted when understood
+	from context.
+	
 	
 	\section{SMTCoq}
 	\label{sec:smtcoq}
@@ -272,8 +423,7 @@ Qed.
 	To do this, the SMT solve converts 
 	$\neg F$ into conjunction or clausal 
 	normal form (CNF) which is a 
-	conjunction of clauses (disjunctions 
-	of literals). It then uses 
+	conjunction of clauses. It then uses 
 	a combination of a SAT solver and 
 	multiple theory	solvers to reduce 
 	the set of input clauses to the 
@@ -281,14 +431,14 @@ Qed.
 	and other rules of inference. Thus,
 	deriving the empty clause, which 
 	represents the most trivial
-	of inconsistency in CNF, from the 
+	inconsistency in CNF, from the 
 	input clauses proves that the input 
 	clauses 
 	are unsatisfiable. A proof
 	from an SMT solver is a tree 
 	with the input clauses (from the 
 	negation of the input formula) at
-	the leaves and the empty clause
+	the leaves and $\bot$
 	at the root. The role of the SMT
 	solver from Fig.~\ref{fig:smtcoqex}
 	is elaborated in Fig.~\ref{fig:smtex}.
@@ -424,7 +574,7 @@ Qed.
 	\texttt{true}, \texttt{false};
 	a negation of a formula; a 
 	conjunction, disjunction, or 
-	implication of two or more 
+	implication of any number of
 	formulas; an exclusive-or or
 	an equivalence of two formulas; 
 	or, an if-then-else of three formulas.
@@ -463,10 +613,10 @@ Qed.
 		for the term $5 + y$ where $y$ 
 		has index $2$.
 		\item Recursively, from the previous example,
-		\texttt{AppUnint 
+		\texttt{AppUnintr
 			1 []} for $x$.
 		\item Recursively, from the previous example,
-		\texttt{AppUnint 2 []} for $y$.
+		\texttt{AppUnintr 2 []} for $y$.
 	\end{itemize}
 	Finally, for convenience of representing 
 	CNF formulas in SMTCoq, a \texttt{clause} 
@@ -482,12 +632,12 @@ Qed.
 	Fig.~\ref{fig:smtex} 
 	as the following \texttt{state}:
 	\begin{align*}
-	\{&\texttt{[Fnot Fatom (AppUnint 1 []); 
-		Fatom (AppUnint 2 [])],} &(*\ \neg b \lor c\ *)\\
-	&\texttt{[Fnot Fatom (AppUnint 0 []);
-		Fatom (AppUnint 1 [])],} &(*\ \neg a \lor b\ *)\\
-	&\texttt{[Fatom (AppUnint 0 [])],
-		[Fnot Fatom (AppUnint 2 [])]}\} &(*\ a, \neg c\ *)  
+	\{&\texttt{[Fnot Fatom (AppUnintr 1 []); 
+		Fatom (AppUnintr 2 [])],} &(*\ \neg b \lor c\ *)\\
+	&\texttt{[Fnot Fatom (AppUnintr 0 []);
+		Fatom (AppUnintr 1 [])],} &(*\ \neg a \lor b\ *)\\
+	&\texttt{[Fatom (AppUnintr 0 [])],
+		[Fnot Fatom (AppUnintr 2 [])]}\} &(*\ a, \neg c\ *)  
 	\end{align*}
 	where $a, b,$ and $c$ are indexed as 
 	$0, 1,$ and $2$.
@@ -506,7 +656,7 @@ Qed.
 	\texttt{f} of type \texttt{form}
 	and proof object \texttt{t} of type 
 	\texttt{T}, it checks whether \texttt{t} 
-	from the SMT solver is a proof of the 
+	from the SMT solver is a proof of  
 	unsatisfiability of	\texttt{$\neg$f}, and 
 	returns \texttt{true} if it is. 
 	Although all SMT solvers (that 
@@ -527,7 +677,11 @@ Qed.
 	from all solvers to this certificate 
 	format, and \texttt{T} is the type of 
 	these certificates that are 
-	checked by the checker. 
+	checked by the checker. Note 
+	that these translators are outside 
+	Coq's trusted kernel, but are kept
+	small, and tested using a large 
+	set of benchmarks. 
 	
 	\begin{figure}[t]
 		\begin{center}
@@ -553,7 +707,7 @@ Qed.
 	satisfying model to the 
 	abstraction of the formula, if the 
 	refinement of the model isn't 
-	satisfied by a theory. 
+	satisfied in a theory. 
 	Each of these phases constitute
 	\textit{steps} of the SMT proof
 	that SMTCoq has to check. A step
@@ -598,7 +752,7 @@ Qed.
 	as an external checker for 
 	SMT solver proofs in Coq.
 	SMTCoq, however, is able to 
-	do more than this as demonstrated
+	do more than this, as demonstrated
 	in steps 4 and 5. In addition 
 	to checking SMT solver proofs, 
 	it can lift these up to 
@@ -662,27 +816,20 @@ Qed.
 	quantifier-free fragment of the SMT 
 	solver's logic. Even though quantifiers 
 	appear in the theorem in Coq (Step 1 of 
-	fig.~\ref{fig:smtcoqex}), because
+	Fig.~\ref{fig:smtcoqex}), because
 	of the structure of universal 
 	quantification where all the variables
 	are quantified only in the beginning 
-	of the formula, it is straightforward
+	of the formula and the scope of 
+	each quantifier is the entire formula, 
+	it is straightforward
 	to instantiate away the quantifiers
-	while negating the formula, and thus
-	it suffices to consider the 
-	unquantified version. SMTCoq's 
-	checker also has a quantifier 
-	instantiation step that removes 
-	all quantifiers from SMTCoq 
-	if the quantifiers are just 
-	universal quantifiers appearing
-	in the beginning of the formula.
-	This is equivalent to using 
-	the \texttt{intros} tactic 
-	in Coq to instantiate all the 
-	quantifiers, after which only 
-	a quantifier free formula is 
-	left to prove.
+	using the \texttt{intros} tactic, which 
+	only leaves the quantifier-free 
+	formula in the proof context. 
+	Thus, it suffices to consider the 
+	unquantified version of the 
+	formula from the example.
 	
 	The interpretation function 
 	has the following type.
@@ -696,10 +843,10 @@ Qed.
 	interpretation function returns 
 	the shallow embedding of \texttt{f}
 	with the variables in \texttt{f} 
-	assigned the values specified by 
+	assigned values as specified by 
 	$\nu$. The interpretation of a 
 	formula \texttt{f} for a valuation 
-	$\nu$ is specified as $\mathbb{I}_{\nu}
+	$\nu$ is represented as $\mathbb{I}_{\nu}
 	(\texttt{f})$. 
 	
 	Finally, the 
@@ -726,7 +873,7 @@ Qed.
 	proves that the shallow embedding,
 	or the interpretation of \texttt{f}
 	holds for any valuation of the 
-	variables in \texttt{t} (thus 
+	variables in \texttt{f} (thus 
 	proving it valid). 
 	
 	It is called the reflection 
@@ -810,6 +957,8 @@ Qed.
 	structure with hash-consing of terms
 	and machine integers to store variables,
 	among other optimization tricks.
+	Similar optimizations are also 
+	applied to certificates.
 	Since the reflection principle is 
 	proved for general formulas, 
 	each invocation of it only varies
@@ -844,8 +993,9 @@ Qed.
 	of correctness from the step 
 	checkers, if the steps do 
 	convert the input formula 
-	to $\bot$, then it is straight
-	forward for \texttt{checker}
+	to $\bot$, then it is 
+	straightforward for 
+	\texttt{checker}
 	to conclude that the 
 	(negation of the) input is 
 	unsatisfiable. The division 
@@ -950,97 +1100,6 @@ Qed.
 	is discussed in the rest of this 
 	section.
 	
-	\subsection{Higher-Order Logic}
-	\label{sec:hol}
-	In this section, we specify the 
-	syntax of higher-order logic 
-	and delegate the explanation of 
-	semantics to a 
-	reference~\cite{10.5555/155278}. 
-	HOL consists of 
-	types $\tau$ and terms $t$. 
-	\begin{align*}
-	\tau &:= \alpha\ |\ \kappa^n\ 
-	\tau_1 ... \tau_n\\
-	t &:= x^{\tau}\ |\ c^{\tau}\ |\ t_1\ t_2\ 
-	|\ \lambda x^{\tau}.t
-	\end{align*}	
-	Types $\tau$ are either type
-	variables $\alpha$ or 
-	applications of type 
-	constructors $\kappa^n$ to 
-	$n$ types ($n$ is usually omitted). 
-	Particular types of interest are 
-	the function type --- formed by 
-	applying the arrow type constructor 
-	$\to^{2}$ to other types, the 
-	Boolean type --- $\texttt{bool}$ 
-	(or $\texttt{bool}^0$), the type of 
-	natural numbers --- \texttt{nat},
-	and integers --- \texttt{int}.
-	Terms are typed variables, 
-	typed constants, applications 
-	of terms to terms, or typed
-	$\lambda-$ abstractions. We have
-	the usual Boolean constants 
-	representing logical connectives
-	and quantifiers. For instance, 
-	logical negation, 
-	$\neg^{\texttt{bool} \to 
-		\texttt{bool}}$, universal 
-	quantification,
-	$\forall^{\alpha \to 
-		\texttt{bool} \to \texttt{bool}}$, 
-	and polymorphic equality,
-	$=^{\alpha \to \alpha 
-		\to \texttt{bool}}$. Type 
-	annotations for terms are also 
-	often omitted when understood
-	from context.
-	
-	\subsection{Many-Sorted First-Order Logic}
-	\label{sec:msfol}
-	Many-sorted first-order logic extends
-	first-order logic (FOL) with 
-	types or sorts. We present the 
-	syntax in this section and the 
-	semantics are presented in
-	\cite{Barrett2018}. Syntactically, 
-	the components of MSFOL are sorts 
-	$\sigma$, terms $t$, and 
-	formulas $\phi$. Sorts are 
-	atomic entities that 
-	represent types. Function types 
-	--- ($\sigma_1$, ..., $\sigma_n$) 
-	$\to$ $\sigma$ ---
-	and relation types 
-	--- ($\sigma_1$, ..., $\sigma_m$)
-	are defined over sorts, and 
-	are types of functions and 
-	predicates below. Terms and 
-	formulas are specified as:
-	\begin{align*}
-	t &:= x^{\sigma}\ |\ 
-	f^{(\sigma_1, ..., \sigma_n) \to 
-		\sigma}	(t_1, ..., t_n)\\
-	\phi &:= \bot\ |\ \neg \phi\ |\ 
-	\phi_1 \land \phi_2\ |\ \forall 
-	x^{\sigma} . \phi\ |\ t_1 = t_2
-	\ |\ P^{\sigma_1,...,\sigma_m}
-	(t_1, ..., t_m)
-	\end{align*}
-	Terms are either sorted variables, 
-	or applications of functions to terms.
-	Formulas are constants or logical 
-	connectives applied to other 
-	formulas, quantified formulas, 
-	equality over terms, or predicates 
-	over terms. Connectives $\lor$, 
-	$\to$, $\iff$, and the existential
-	quantifier $\exists$ can be 
-	specified using the connectives 
-	and quantifiers mentioned above.
-	
 	\subsection{Translation}
 	\label{sec:trans}
 	Sledgehammer's SMT solver 
@@ -1111,7 +1170,7 @@ Qed.
 		\rrbracket = \llbracket u
 		\rrbracket\\
 		\llbracket c^{\tau_1 \to ... 
-			\to \tau_n \to \texttt{bool}} 
+			\to \tau_n \to \texttt{Bool}} 
 		t_1 ... t_n \rrbracket &\cong 
 		c^{\llbracket \tau_1 \rrbracket, 
 			..., \llbracket \tau_n \rrbracket}
@@ -1124,7 +1183,7 @@ Qed.
 		\end{align*}
 		\item Variables and function 
 		applications (of return type 
-		other than \texttt{bool}), 
+		other than \texttt{Bool}), 
 		including non-functional 
 		constants have MSFOL 
 		equivalents.
@@ -1182,13 +1241,13 @@ Qed.
 	A \textit{monomorphic type} is a
 	type without type variables 
 	(e.g. $\kappa^0$, $\kappa^1 
-	\kappa^0$, and $\texttt{bool}^0 
+	\kappa^0$, and $\texttt{Bool}^0 
 	\to \texttt{int}^0$ 
 	where $\to$ is 
 	a type consructor), and 
 	a \textit{schematic type} is one 
 	with type variables (such as 
-	$\alpha \to \texttt{bool}^0$). 
+	$\alpha \to \texttt{Bool}^0$). 
 	Monomorphization involves 
 	repeatedly instantiating schematic
 	terms based on a set of 
@@ -1205,14 +1264,14 @@ Qed.
 		$\tau_M$ \textit{matches} a schematic 
 		type $\tau_S$ if it can replace the 
 		type variables in the schematic 
-		type. For example, \texttt{bool} 
-		matches $\alpha$; and $\texttt{bool} 
+		type. For example, \texttt{Bool} 
+		matches $\alpha$; and $\texttt{Bool} 
 		\to \texttt{int}$ matches 
-		$\texttt{bool} \to \beta$
+		$\texttt{Bool} \to \beta$
 		since \texttt{int} matches 
 		$\beta$. Finally, for our running 
 		example taken from Bohme et al., 
-		${\texttt{bool} \to \kappa}$
+		${\texttt{Bool} \to \kappa}$
 		matches $\alpha \to \beta$,
 		where $\kappa$ is a monomorphic
 		type. 
@@ -1235,15 +1294,15 @@ Qed.
 		\end{center} 
 		w.r.t. constant
 		\begin{center}
-			$(\lambda x^{\texttt{bool}}.
+			$(\lambda x^{\texttt{Bool}}.
 			\texttt{if }x\texttt{ then }
 			a^{\kappa} \texttt{ else }
-			b^{\kappa})^{\texttt{bool} \to 
+			b^{\kappa})^{\texttt{Bool} \to 
 				\kappa}$ 
 		\end{center}
 		is
 		\begin{center}
-			$(\forall f^{\texttt{bool} 
+			$(\forall f^{\texttt{Bool} 
 				\to \kappa},\ x^{\alpha},\ 
 			xs^{\texttt{list }\alpha}. 
 			\texttt{ apphd }f\ (\texttt{cons }
@@ -1252,14 +1311,14 @@ Qed.
 		where the instantiation 
 		has turned all occurrences of $f$ 
 		in the term from $f^{\alpha \to \beta}$ 
-		to $f^{\texttt{bool} \to \kappa}$.
+		to $f^{\texttt{Bool} \to \kappa}$.
 		The following presents some inline, 
 		technical preliminaries about 
 		the rest of the terms.
 		\texttt{list $\alpha$} is a compound,
 		polymorphic type of a list of 
 		$\alpha$'s where $\alpha$ is a type 
-		variable. \texttt{list bool} is the 
+		variable. \texttt{list Bool} is the 
 		type of lists of Booleans. \texttt{cons} 
 		is the list constructor of type 
 		$\alpha \to \texttt{list }\alpha \to 
@@ -1289,13 +1348,13 @@ Qed.
 		substitutions induced by the 
 		constants in $t^M$ is defined. This 
 		instance might still be schematic. For 
-		example, since $x^{\texttt{bool}}$ is 
+		example, since $x^{\texttt{Bool}}$ is 
 		an instance of $x^{\alpha}$ w.r.t.
-		$\texttt{T}^{\texttt{bool}}$, 
-		and $xs^{\texttt{list bool}}$ is 
+		$\texttt{T}^{\texttt{Bool}}$, 
+		and $xs^{\texttt{list Bool}}$ is 
 		an instance of 
 		$xs^{\texttt{list }\alpha}$ 
-		w.r.t. $[\ ]^{\texttt{list bool}}$,
+		w.r.t. $[\ ]^{\texttt{list Bool}}$,
 		we can combine the instantiation 
 		of the constant in the previous 
 		example to obtain that the 
@@ -1310,15 +1369,15 @@ Qed.
 		\begin{center}
 			$(\texttt{apphd }(\lambda 
 			x.\ \texttt{if }x\texttt{ then }
-			a \texttt{ else } b)^{\texttt{bool} 
+			a \texttt{ else } b)^{\texttt{Bool} 
 				\to \kappa}\ (\texttt{cons T}\ 
 			[\ ])) \neq a$
 		\end{center}
 		to be
 		\begin{center}
-			$(\forall f^{\texttt{bool}
-				\to \kappa},\ x^{\texttt{bool}},
-			\ xs^{\texttt{list bool}}.\ 
+			$(\forall f^{\texttt{Bool}
+				\to \kappa},\ x^{\texttt{Bool}},
+			\ xs^{\texttt{list Bool}}.\ 
 			\texttt{apphd }f\ (\texttt{cons }x
 			\ xs) = f\ x)$
 		\end{center}
@@ -1368,21 +1427,21 @@ Qed.
 	\ xs) = f\ x)\ \land\ \\
 	&((\texttt{apphd }(\lambda x.\ 
 	\texttt{if }x \texttt{ then }a 
-	\texttt{ else } b)^{\texttt{bool} 
+	\texttt{ else } b)^{\texttt{Bool} 
 		\to \kappa}\ (\texttt{cons T}\ [\ ])) 
 	\neq a)
 	\end{align*}
 	to the formula $F^{\prime}$
 	\begin{align*}
 	F^{\prime}:\ &(\forall 
-	f^{\texttt{bool} \to \kappa},\ 
-	x^{\texttt{bool}},\ 
-	xs^{\texttt{list bool}}.\ 
+	f^{\texttt{Bool} \to \kappa},\ 
+	x^{\texttt{Bool}},\ 
+	xs^{\texttt{list Bool}}.\ 
 	\texttt{apphd }f\ (\texttt{cons }x
 	\ xs) = f\ x) \ \land\ \\
 	&((\texttt{apphd } (\lambda x.\ 
 	\texttt{if }x \texttt{ then }a 
-	\texttt{ else } b)^{\texttt{bool} 
+	\texttt{ else } b)^{\texttt{Bool} 
 		\to \kappa}\ (\texttt{cons T}\ 
 	[\ ])) \neq a).
 	\end{align*}
@@ -1451,12 +1510,12 @@ Qed.
 		check out, semantically, 
 		given that $f^{\alpha \to \beta}$
 		is instantiated to 
-		$f^{\texttt{bool} \to \kappa}$, 
+		$f^{\texttt{Bool} \to \kappa}$, 
 		and that $f$ is applied to $x$, 
 		$x$ has to have type 
-		\texttt{bool} and this can be 
+		\texttt{Bool} and this can be 
 		achieved by matching it with 
-		$x^{\texttt{bool}}$.
+		$x^{\texttt{Bool}}$.
 		\item Monomorphization is 
 		incomplete and the instantiations 
 		are done heuristically. This 
@@ -1499,10 +1558,10 @@ Qed.
 	uninterpreted function with sort 
 	$\tau \to \kappa$ where $\kappa$ 
 	is the sort of $u$. For instance, 
-	$(\lambda x^{\texttt{int}}, x + 1)\ 
+	$(\lambda x^{\texttt{Int}}, x + 1)\ 
 	5 = 6$
 	is translated to $(c\ 5 = 6) \land
-	(\forall x^{\texttt{int}}.\ 
+	(\forall x^{\texttt{Int}}.\ 
 	c\ x = x + 1)$. $\lambda-$lifting
 	faithfully preserves the 
 	semantics of the function, and 
@@ -1550,7 +1609,7 @@ Qed.
 	where $m$ could be $0$, in which 
 	case there are no applications 
 	of \texttt{app}. For example, if 
-	$f^{\texttt{int} \to \texttt{int}}$ 
+	$f^{\texttt{Int} \to \texttt{Int}}$ 
 	occurs twice in a formula, once 
 	partially applied to no arguments 
 	as $f$, and once fully applied as 
@@ -1622,9 +1681,9 @@ Qed.
 	\end{center}
 	Some examples are:
 	\begin{align*}
-	\llbracket \texttt{bool} \to
+	\llbracket \texttt{Bool} \to
 	\kappa \rrbracket &\cong \kappa_1\\
-	\llbracket \texttt{list\ bool}
+	\llbracket \texttt{list\ Bool}
 	\rrbracket &\cong \kappa_2
 	\end{align*}
 	At the time of writing of Bohme et al.,
@@ -1650,7 +1709,7 @@ Qed.
 	However, SMT solvers have no 
 	axiomatization of, say, lists 
 	of Booleans. It is crucial that when 
-	\texttt{list bool} is 
+	\texttt{list Bool} is 
 	translated to $\kappa_2$, the 
 	premise selector of sledgehammer
 	selects the right lemmas about 
