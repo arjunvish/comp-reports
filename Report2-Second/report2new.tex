@@ -1068,7 +1068,19 @@ Qed.
 	the inference steps of the proof 
 	within Isabelle/HOL.
 	
-	Given a conjecture $\Phi$ in 
+	\begin{figure}[t]
+		\begin{center}
+			\includegraphics[scale=0.3]{sledgehammer}
+			\caption{SMT solvers' integration with 
+			Isabelle/HOL}
+			\label{fig:sledgehammer}
+		\end{center}
+	\end{figure}
+
+	The integration of Sledgehammer 
+	with SMT solvers is illustrated in 
+	Fig.~\ref{fig:sledgehammer}. Given 
+	a conjecture $\Phi$ in 
 	Isabelle/HOL, Sledgehammer 
 	selects a set of facts 
 	$\Gamma$ that might be relevant 
@@ -1076,11 +1088,33 @@ Qed.
 	the formula $\Gamma \land \neg 
 	\Phi$ to the SMT solver to check 
 	for unsatisfiability. If the SMT 
+	solver finds the formula to be 
+	satisfiable, it returns a satisfying 
+	model, which serves as a 
+	counterexample 
+	of the conjecture. If the SMT 
 	solver is able to refute the 
 	conjecture (i.e., conclude 
 	the unsatisfiability of its 
 	negation), it returns 
-	a proof. Since Isabelle/HOL 
+	a proof. The proof tree (that
+	proves $\bot$ from the 
+	input) is then reconstructed in 
+	Isabelle/HOL via a bottom-up 
+	traversal of the tree, where 
+	for each node, a theorem is 
+	added to Isabelle/HOL by Metis.
+	Unlike SMTCoq, this reconstruction
+	process occurs external to 
+	Isabelle/HOL's logic ---
+	an external procedure guides 
+	the reconstruction of nodes. 
+	However, a theorem is added to 
+	Isabelle/HOL by Metis, only if it 
+	is provable by Isabelle/HOL's LCF 
+	kernel. Thus, this process doesn't
+	extend the trust base of the ITP.
+	Since Isabelle/HOL 
 	implements a higher-order logic 
 	(HOL), which 
 	is more expressive than 
@@ -1233,6 +1267,11 @@ Qed.
 		This is not directly 
 		expressible in MSFOL.
 	\end{itemize}
+	The following subsections describe
+	phases of the translation that 
+	address the elimination of each of 
+	these non-first-order components of 
+	HOL.
 	
 	\subsubsection{Monomorphization}
 	Recall that HOL types $\tau$ are 
@@ -1278,14 +1317,14 @@ Qed.
 		type. 
 		
 		\item Given a monomorphic constant 
-		$c^{\tau_M}$,  if $t^S$ is a 
+		$c^{\tau_M}$,  if $t^{\tau_S}$ is a 
 		schematic term that contains a 
 		schematic constant $c^{\tau_S}$ 
 		such that $\tau_M$ matches 
 		$\tau_S$, then $c^{\tau_M}$ induces 
-		a substitution $\sigma$ on $t^S$, 
-		and $\sigma(t^S)$ is an instance of 
-		$t^S$ w.r.t. to $c^{\tau_M}$. 
+		a substitution $\sigma$ on $t^{\tau_S}$, 
+		and $\sigma(t^{\tau_S})$ is an instance of 
+		$t^{\tau_S}$ w.r.t. to $c^{\tau_M}$. 
 		For example, the instance of term
 		\begin{center}
 			$(\forall f^{\alpha \to \beta},\ 
@@ -1342,12 +1381,12 @@ Qed.
 		(\texttt{hd }l)$).
 		\item The idea of an instance is 
 		extended to terms as follows. If 
-		$t^M$ is a monomorphic term, then 
-		$\sigma(t^S)$ is an instance of 
-		$t^S$ w.r.t. $t^M$, if 
+		$t^{\tau_M}$ is a monomorphic term, 
+		then $\sigma(t^{\tau_S})$ is an instance 
+		of $t^{\tau_S}$ w.r.t. $t^{\tau_M}$, if 
 		$\sigma$, the combination of all 
 		substitutions induced by the 
-		constants in $t^M$ is defined. This 
+		constants in $t^{\tau_M}$ is defined. This 
 		instance might still be schematic. For 
 		example, since $x^{\texttt{Bool}}$ is 
 		an instance of $x^{\alpha}$ w.r.t.
@@ -1465,7 +1504,7 @@ Qed.
 		consider $S = \{c^{\alpha}
 		\land c^{\kappa\ \alpha}\}$
 		and $M = \{c^{\kappa_0}\}$.
-		Now, $\kappa_0$ matches 
+		$\kappa_0$ matches 
 		$\alpha$, so the instance
 		$c^{\kappa_0} \land 
 		c^{\kappa\ \kappa_0}$ is added 
