@@ -33,368 +33,77 @@
 
 \section{Introduction}
 \label{sec:intro}
-	In this report, we will explore
-	two aspects of the integration of 
-	SMT solvers~\cite{Barrett2018} with 
-	Coq via 
-	SMTCoq~\cite{DBLP:phd/hal/Keller13}. 
-	SMT solvers reason in 
-	a classical logic and propositions 
-	in Coq implement a constructive 
-	logic. First, we will see how SMTCoq 
-	reconciles these logics. SMT 
-	solvers implement the DPLL(T) 
-	algorithm and produce resolution 
-	proofs which are then checked in 
-	Coq by SMTCoq. Next, we will look at 
-	DPLL(T) proofs with the help 
-	of an example. 
+	SMTCoq~\cite{DBLP:phd/hal/Keller13} 
+	is a skeptical cooperation 
+	between the Coq proof assistant, and 
+	(SAT and) SMT solvers~\cite{Barrett2018}, 
+	implemented as a 
+	Coq plugin. This integration is 
+	useful for the ITP (Coq) since it 
+	allows proof goals in Coq to be 
+	automatically discharged by an 
+	SMT solver. However, unlike 
+	Coq's small, verifiable kernel,
+	SMT solvers have tens of thousands 
+	of lines of code and are more prone
+	to bugs. Since an SMT solver's code 
+	base is much harder to verify, 
+	many SMT solvers produce proofs
+	of their results in addition to 
+	a claim of (un)satisfiability
+	of a set of formulas. For satisfiable 
+	formulas, a proof is simply a
+	satisfying model which is easy 
+	to specify and check (for 
+	quantifier-free formulas). For 
+	unsatisfiable formulas, however,
+	SMT solvers need to show that 
+	the input formulas are inconsistent.
+	They do this by reducing the formulas 
+	to a trivial unsatisfiable formula
+	$False$, or $\bot$. A proof 
+	producing SMT solver is integrated 
+	with Coq by checking the proof 
+	inside of Coq, and this checker 
+	is proven correct to lift up 
+	the formula to a Coq formula via 
+	process called computational 
+	reflection (described in Report 2).
 	
-\section{Classical Logic in Coq}
-\label{sec:logic}
-	Constructive or intuitionistic logic 
-	is a branch of mathematical logic 
-	studying arguments concerning 
-	constructive objects. A proposition 
-	is provable in constructive logic, if 
-	a (proof) term inhabiting the 
-	proposition can be constructed. 
-	Coq implements a constructive 
-	logic through its \texttt{Prop}
-	type of propositions. In other words,
-	a \texttt{Prop} $P$ can be proved in 
-	Coq only if a proof term having 
-	type $P$ can be constructed.
-	For example, the following Coq
-	code proves the formula
-	$a \to a \lor b$, for any 
-	\texttt{Prop}s $a$ and $b$.
-\begin{minted}{Coq}
-Theorem orIntroL : forall (a b: Prop), a -> a \/ b.
-Proof.
-  intros a b Ha.
-  left. apply Ha.
-Qed.
-\end{minted}
-	The formula asserts that given a 
-	proof of the proposition $a$, we
-	have a proof of the 
-	disjunction of $a$ and $b$. The 
-	\textit{proof script} between 
-	\texttt{Proof} 
-	and \texttt{Qed} constructs a 
-	proof term of type \texttt{forall 
-	(a b: Prop), a -> a $\backslash/$ b}. 
-	Coq presents to the user a \textit{goal}
-	and a \textit{proof 
-	context}, which contains the proof terms
-	available to prove the goal.
-	Initially, the goal is the entire 
-	proposition being proven, and the 
-	context is empty, and the user
-	can manipulate the goal to break 
-	it down and move over some of its 
-	constituents into the context
-	using Coq functions called 
-	\textit{tactics}. The first line of the 
-	script above introduces 
-	the propositions $a$ and $b$ and the 
-	proof $Ha$ of $a$ into the 
-	proof context (using the \texttt{intros}
-	tactic). The only way to prove a 
-	disjunction is to prove one 
-	of the disjuncts. This is a crucial
-	detail that distinguishes constructive
-	logic from classical logic, as we 
-	will see in the next example. 
-	The second line of the proof script 
-	proves the left disjunct by using 
-	the proof of $a$ from the context.
+	An added complication in this 
+	integration of SMT solvers with 
+	Coq is the incompatibility of 
+	their logics. Propositions in 
+	Coq have the 
+	\texttt{Prop} type which are 
+	implemented as constructive
+	or intuitionistic logic. SMT
+	solvers, on the other hand, 
+	implement a classical logic. This
+	incompatibility is overcome in 
+	SMTCoq by using SMT solvers to 
+	prove Boolean formulas in 
+	Coq (of type \texttt{Bool})
+	that are classical, while also 
+	supporting a fragment of 
+	propositions that don't violate 
+	the laws of constructive logic.
 	
-	Classical logic extends 
-	constructive logic with the 
-	\textit{law of the excluded 
-	middle} that states that for 
-	every proposition $a$, 
-	$a \lor \neg a$ holds. This can 
-	also be stated as the 
-	double negation elimination 
-	law or as proving a 
-	proposition by contradiction. As
-	such, some statements that are true 
-	in classical logic might not have 
-	a proof in constructive logic.
-	The law of the excluded middle
-	itself is a convenient example.
-\begin{minted}{coq}
-Theorem LEMProp : forall (a : Prop), a \/ ~a.
-Proof.
-  intros a. 
-Abort.
-\end{minted}
-	Again, the only way to prove the 
-	disjunction is to prove that one 
-	of the disjuncts holds. However, 
-	we don't any proof terms in our
-	context to work 
-	with here, to construct the 
-	proof of either $a$ or $\neg a$,
-	so we quit out of the proof.
-	
-	SMT solvers are able to prove 
-	such classical formulas and as
-	such, aren't logically compatible
-	with Coq's \texttt{Prop} type. 
-	In addition to the \texttt{Prop} 
-	type, Coq has a Boolean 
-	(\texttt{bool}) type in its standard 
-	library~\cite{CoqBool}, that defines 
-	Booleans as an 
-	inductive type with two nullary
-	constructors \texttt{true} and
-	\texttt{false}. This Boolean type 
-	in Coq implements a classical 
-	logic. Any Boolean value can 
-	be inspected, pattern matched on,
-	and evaluated to either 
-	\texttt{true} or \texttt{false}.
-	Formulas over the type 
-	\texttt{bool} are not theorems
-	in Coq, since they don't have 
-	the \texttt{Prop} type. To 
-	state a Boolean formula in a 
-	Coq proposition, the formula is 
-	equated to \texttt{true}. 
-	For example, the law of 
-	excluded middle for 
-	\texttt{a : bool} is stated as 
-	\begin{center}
-	\texttt{a || (negb a)}
-	\end{center}
-	where \texttt{orb} is the 
-	disjunction operator over 
-	Booleans and has 
-	infix notation \texttt{||},
-	and \texttt{negb} is the 
-	negation operator over 
-	Booleans.
-	This is stated as a Coq theorem 
-	and proved as follows:
-\begin{minted}{coq}
-Theorem LEMBool : forall a : bool, a || (negb a) = true.
-Proof.
-intros a. destruct a.
-  + simpl. reflexivity.
-  + simpl. reflexivity.
-Qed.
-\end{minted}
-	\texttt{destruct a} performs a 
-	case analysis on $a$, and since $a$ 
-	is a Boolean that can 
-	only be either \texttt{true}
-	or \texttt{false}, the two lines
-	beginning with \texttt{+} 
-	replace the $a$ in the context
-	with exactly those values.
-	When $a$ is \texttt{true}, the 
-	goal reduces to 
-	\texttt{true || not true = true}
-	and when it is \texttt{false}, it
-	reduces to 
-	\texttt{false || not false = true}.
-	Both of these are simplified to 
-	\texttt{true = true} using the 
-	tactic \texttt{simpl} and then 
-	by the reflexivity of 
-	\texttt{true}, both equalities
-	are provable. Notice that, 
-	neither a proof of $a$, nor 
-	a proof of $\neg a$ were 
-	constructed here. Arguments were
-	made in terms of every possible 
-	value $a$ could take, and the
-	conjecture was proven in 
-	each case. Such a proof, as we 
-	saw above, is impossible in 
-	constructive logic.
-	
-	Since SMT solvers implement 
-	a classical logic, SMTCoq 
-	uses SMT solver proofs to 
-	prove classical formulas in 
-	Coq over Booleans. The 
-	\texttt{LEMBool} lemma from 
-	above would be a simple goal that 
-	could be dispatched to an SMT 
-	solver using SMTCoq's \texttt{smt}
-	tactic:
-\begin{minted}{coq}
-Theorem LEMBool' : forall a : bool, a || (negb a) = true.
-Proof.
-  smt.
-Qed.
-\end{minted}
-	As described in the previous report, 
-	SMTCoq defines a \texttt{form} type
-	as a \textit{deep embedding} of Boolean 
-	formulas in Coq, and \textit{reflects} 
-	proofs of \texttt{form}s from the SMT 
-	solver to proofs of Boolean formulas, 
-	the shallow embedding of formulas 
-	in Coq. A checker in Coq checks 
-	proofs from the SMT solver against
-	the deep embedding of formulas, and 
-	the reflection principle is a proof
-	of correctness of the checker, that 
-	is used by SMTCoq to prove classical
-	goals in Coq represented using the
-	\texttt{Bool} type.
-	
+	The first half of this report 
+	discusses the proof production 
+	systems of SMT solvers. The
+	second half explores the difference
+	between the logics of SMT solvers
+	and Coq, and SMTCoq's efforts 
+	to prove formulas in Coq that 
+	SMT solvers can help with
+	while being logically consistent.
 
-	\subsection{Theories and Prop Predicates}
-	SMTCoq integrates both 
-	SAT and SMT solvers with Coq. If 
-	it were reasoning about purely 
-	Boolean formulas such as 
-	\texttt{LEMBool} above, it wouldn't 
-	need SMT solvers at all. It could
-	do that with just SAT or
-	propositional satisfiability
-	solvers. SMT or satisfiability
-	modulo theories solvers provide 
-	the ability to reason in theories
-	such as finite- and infinite-precision 
-	integers and arrays. Using its SMT 
-	solver integration, SMTCoq is able to 
-	prove expressive Boolean formulas
-	over the theories of uninterpreted 
-	functions, linear integer arithmetic,
-	arrays, and bit-vectors. Consider 
-	the following examples.
-\begin{minted}{Coq}
-Theorem Z_congBool : forall (a b : Z) (f : Z -> Z), 
-  (Z.eqb a b) = true -> (Z.eqb (f a) (f b) = true).
-Proof.
-  smt.
-Qed.
-
-Theorem BV_ulteZeroBool : forall (b : bitvector 4),
-  bv_ult #b|0|0|0|0| b = true \/ bv_eq b #b|0|0|0|0| = true.
-Proof.
-  smt.
-Qed.
-\end{minted}
-	\texttt{Z\_congBool} proves the 
-	congruence rule over integer 
-	to integer functions and 
-	\texttt{BV\_ulteZeroBool} proves 
-	that all 4-bit integers (bit-vectors 
-	of length 4) in their 
-	unsigned interpretation are 
-	greater than or equal to $0$. 
-	\texttt{Z.eqb} is the Boolean 
-	equality predicate over integers 
-	in Coq, and \texttt{bv\_ult}
-	and \texttt{bv\_eq} are 
-	respectively the Boolean 
-	less than (over unsigned integers)
-	and equality predicate for 
-	machine integers. Since 
-	predicates in these theories 
-	are expressed as Boolean terms, 
-	they need to be equated to 
-	\texttt{true} as shown above to 
-	be well-formed propositions in 
-	Coq. However, for some of these 
-	predicates, SMTCoq is able to 
-	prove their \texttt{Prop} version,
-	in addition to the \texttt{bool}
-	version. In other words, SMTCoq
-	is able to prove certain 
-	non-Boolean propositions in Coq.
-	To do this, it implements a 
-	\texttt{Prop} to \texttt{bool}
-	conversion for these predicates, 
-	so when a user asks SMTCoq to 
-	prove a proposition over one 
-	of these predicates, SMTCoq
-	converts it to a Boolean 
-	predicate, so that it now
-	suffices to prove the formula
-	over the Boolean predicate, 
-	which can be done by an SMT 
-	solver. As it turns out, 
-	the \texttt{Prop} to 
-	\texttt{Bool} conversion has 
-	been implemented for the 
-	predicates used above,
-	so SMTCoq can prove their 
-	corresponding \texttt{Prop}
-	theorems:
-\begin{minted}{Coq}
-Theorem Z_congProp : forall (a b : Z) (f : Z -> Z), a = b -> 
-  f a = f b.
-Proof.
- smt.
-Qed.
-
-Theorem BV_ulteZeroProp : forall (b : bitvector 4), 
-  bv_ultP #b|0|0|0|0| b \/ b = #b|0|0|0|0|.
-Proof.
- smt.
-Qed.
-\end{minted}
-	The	\texttt{Prop} to \texttt{Bool} 
-	conversion of SMTCoq consists of 
-	applying proofs of equivalence 
-	between a \texttt{Prop} version
-	of a predicate and its \texttt{Bool}
-	version. For example, SMTCoq's 
-	bitvector library proves the 
-	following lemma of equivalence 
-	between the \texttt{Bool}
-	and \texttt{Prop} version of the 
-	unsigned less than predicate over
-	bit-vectors, which is applied 
-	by SMTCoq's \texttt{Prop} to 
-	\texttt{Bool} conversion when 
-	a user uses the \texttt{Prop}
-	version of this predicate in a 
-	query to SMTCoq, as in 
-	\texttt{BV\_ulteZeroProp}.
-\begin{minted}{Coq}
-Theorem bv_ult_B2P : forall n (a b : bitvector n), 
-  bv_ult a b = true <-> bv_ultP a b.
-\end{minted}
-	The \texttt{Prop} to \texttt{Bool}
-	conversion is possible for a predicate 
-	on a type, if that predicate is 
-	decidable --- that is, for every 
-	element of that type, the predicate 
-	either holds or doesn't hold. This 
-	decidability is proved via a lemma 
-	such as \texttt{bv\_ult\_B2P}. Some
-	of the lemmas used by the 
-	\texttt{Prop} to \texttt{Bool} 
-	conversion module are proved in SMTCoq's
-	libraries, others are proved in 
-	Coq's standard libraries. For 
-	example, Coq's library of integers
-	proves the equivalence between the 
-	Boolean and Propositional version 
-	of the less than predicate.
-\begin{minted}{Coq}
-Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
-\end{minted}
-	The module in SMTCoq that does
-	the conversion applies these 
-	equivalence lemmas to reduce a 
-	\texttt{Prop} predicate to a 
-	\texttt{Bool} one, before sending 
-	it to the SMT solver.
+\section{Preliminaries}
+\label{sec:prelims}
 
 \section{DPLL(T) Proofs}
-\label{smtproofs}
+\label{sec:smtproofs}
 	The typical SMT solver composes 
 	a SAT solver with multiple theory
 	solver in an abstraction-refinement
@@ -483,7 +192,7 @@ Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
 	unsatisfiable input.
 	
 	\subsection{The DPLL(T) Algorithm}
-	\label{dpllt}
+	\label{sec:dpllt}
 	
 	DPLL(T) is originally presented 
 	in Nieuwenhuis et al.~\cite{DBLP:journals/jacm/NieuwenhuisOT06}, 
@@ -1061,6 +770,7 @@ Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
 	section.
 	
 	\subsection{Theory Lemma Proofs}
+	\label{sec:thproof}
 	Theory lemmas at the leaves are 
 	justified by satellite proofs 
 	from the theory solver that produce 
@@ -1125,6 +835,351 @@ Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
 	\caption{EUF Proof from Figure~\ref{fig:propproof}}
 	\label{fig:eufproof}
 	\end{figure}
+
+
+	\section{Classical vs Constructive Logic in Coq}
+	\label{sec:logic}
+	Constructive or intuitionistic logic 
+	is a branch of mathematical logic 
+	studying arguments concerning 
+	constructive objects. A proposition 
+	is provable in constructive logic, if 
+	a (proof) term inhabiting the 
+	proposition can be constructed. 
+	Coq implements a constructive 
+	logic through its \texttt{Prop}
+	type of propositions. In other words,
+	a \texttt{Prop} $P$ can be proved in 
+	Coq only if a proof term having 
+	type $P$ can be constructed.
+	For example, the following Coq
+	code proves the formula
+	$a \to a \lor b$, for any 
+	\texttt{Prop}s $a$ and $b$.
+	\begin{minted}{Coq}
+Theorem orIntroL : forall (a b: Prop), a -> a \/ b.
+Proof.
+  intros a b Ha.
+  left. apply Ha.
+Qed.
+	\end{minted}
+	The formula asserts that given a 
+	proof of the proposition $a$, we
+	have a proof of the 
+	disjunction of $a$ and $b$. The 
+	\textit{proof script} between 
+	\texttt{Proof} 
+	and \texttt{Qed} constructs a 
+	proof term of type \texttt{forall 
+	(a b: Prop), a -> a $\backslash/$ b}. 
+	Coq presents to the user a 
+	\textit{goal} and a \textit{proof 
+	context}, which contains the proof 
+	terms available to prove the goal.
+	Initially, the goal is the entire 
+	proposition being proven, and the 
+	context is empty, and the user
+	can manipulate the goal to break 
+	it down and move over some of its 
+	constituents into the context
+	using Coq functions called 
+	\textit{tactics}. The first line of the 
+	script above introduces 
+	the propositions $a$ and $b$ and the 
+	proof $Ha$ of $a$ into the 
+	proof context (using the \texttt{intros}
+	tactic). The only way to prove a 
+	disjunction is to prove one 
+	of the disjuncts. This is a crucial
+	detail that distinguishes constructive
+	logic from classical logic, as we 
+	will see in the next example. 
+	The second line of the proof script 
+	proves the left disjunct by using 
+	the proof of $a$ from the context.
+	
+	Classical logic extends 
+	constructive logic with the 
+	\textit{law of the excluded 
+	middle} that states that for 
+	every proposition $a$, 
+	$a \lor \neg a$ holds. This can 
+	also be stated as the 
+	double negation elimination 
+	law or as proving a 
+	proposition by contradiction. As
+	such, some statements that are true 
+	in classical logic might not have 
+	a proof in constructive logic.
+	The law of the excluded middle
+	itself is a convenient example.
+	\begin{minted}{coq}
+Theorem LEMProp : forall (a : Prop), a \/ ~a.
+Proof.
+  intros a. 
+Abort.
+	\end{minted}
+	Again, the only way to prove the 
+	disjunction is to prove that one 
+	of the disjuncts holds. However, 
+	we don't any proof terms in our
+	context to work 
+	with here, to construct the 
+	proof of either $a$ or $\neg a$,
+	so we quit out of the proof.
+	
+	SMT solvers are able to prove 
+	such classical formulas and as
+	such, aren't logically compatible
+	with Coq's \texttt{Prop} type. 
+	In addition to the \texttt{Prop} 
+	type, Coq has a Boolean 
+	(\texttt{bool}) type in its standard 
+	library~\cite{CoqBool}, that defines 
+	Booleans as an 
+	inductive type with two nullary
+	constructors \texttt{true} and
+	\texttt{false}. This Boolean type 
+	in Coq implements a classical 
+	logic. Any Boolean value can 
+	be inspected, pattern matched on,
+	and evaluated to either 
+	\texttt{true} or \texttt{false}.
+	Formulas over the type 
+	\texttt{bool} are not theorems
+	in Coq, since they don't have 
+	the \texttt{Prop} type. To 
+	state a Boolean formula in a 
+	Coq proposition, the formula is 
+	equated to \texttt{true}. 
+	For example, the law of 
+	excluded middle for 
+	\texttt{a : bool} is stated as 
+	\begin{center}
+		\texttt{a || (negb a)}
+	\end{center}
+	where \texttt{orb} is the 
+	disjunction operator over 
+	Booleans and has 
+	infix notation \texttt{||},
+	and \texttt{negb} is the 
+	negation operator over 
+	Booleans.
+	This is stated as a Coq theorem 
+	and proved as follows:
+	\begin{minted}{coq}
+Theorem LEMBool : forall a : bool, a || (negb a) = true.
+Proof.
+  intros a. destruct a.
+  + simpl. reflexivity.
+  + simpl. reflexivity.
+Qed.
+	\end{minted}
+	\texttt{destruct a} performs a 
+	case analysis on $a$, and since $a$ 
+	is a Boolean that can 
+	only be either \texttt{true}
+	or \texttt{false}, the two lines
+	beginning with \texttt{+} 
+	replace the $a$ in the context
+	with exactly those values.
+	When $a$ is \texttt{true}, the 
+	goal reduces to 
+	\texttt{true || not true = true}
+	and when it is \texttt{false}, it
+	reduces to 
+	\texttt{false || not false = true}.
+	Both of these are simplified to 
+	\texttt{true = true} using the 
+	tactic \texttt{simpl} and then 
+	by the reflexivity of 
+	\texttt{true}, both equalities
+	are provable. Notice that, 
+	neither a proof of $a$, nor 
+	a proof of $\neg a$ were 
+	constructed here. Arguments were
+	made in terms of every possible 
+	value $a$ could take, and the
+	conjecture was proven in 
+	each case. Such a proof, as we 
+	saw above, is impossible in 
+	constructive logic.
+	
+	Since SMT solvers implement 
+	a classical logic, SMTCoq 
+	uses SMT solver proofs to 
+	prove classical formulas in 
+	Coq over Booleans. The 
+	\texttt{LEMBool} lemma from 
+	above would be a simple goal that 
+	could be dispatched to an SMT 
+	solver using SMTCoq's \texttt{smt}
+	tactic:
+	\begin{minted}{coq}
+Theorem LEMBool' : forall a : bool, a || (negb a) = true.
+Proof.
+  smt.
+Qed.
+	\end{minted}
+	As described in the previous report, 
+	SMTCoq defines a \texttt{form} type
+	as a \textit{deep embedding} of Boolean 
+	formulas in Coq, and \textit{reflects} 
+	proofs of \texttt{form}s from the SMT 
+	solver to proofs of Boolean formulas, 
+	the shallow embedding of formulas 
+	in Coq. A checker in Coq checks 
+	proofs from the SMT solver against
+	the deep embedding of formulas, and 
+	the reflection principle is a proof
+	of correctness of the checker, that 
+	is used by SMTCoq to prove classical
+	goals in Coq represented using the
+	\texttt{Bool} type.
+	
+	
+	\subsection{Theories and Prop Predicates}
+	SMTCoq integrates both 
+	SAT and SMT solvers with Coq. If 
+	it were reasoning about purely 
+	Boolean formulas such as 
+	\texttt{LEMBool} above, it wouldn't 
+	need SMT solvers at all. It could
+	do that with just SAT or
+	propositional satisfiability
+	solvers. SMT or satisfiability
+	modulo theories solvers provide 
+	the ability to reason in theories
+	such as finite- and infinite-precision 
+	integers and arrays. Using its SMT 
+	solver integration, SMTCoq is able to 
+	prove expressive Boolean formulas
+	over the theories of uninterpreted 
+	functions, linear integer arithmetic,
+	arrays, and bit-vectors. Consider 
+	the following examples.
+	\begin{minted}{Coq}
+Theorem Z_congBool : forall (a b : Z) (f : Z -> Z), 
+  (Z.eqb a b) = true -> (Z.eqb (f a) (f b) = true).
+Proof.
+  smt.
+Qed.
+	
+Theorem BV_ulteZeroBool : forall (b : bitvector 4),
+  bv_ult #b|0|0|0|0| b = true \/ bv_eq b #b|0|0|0|0| = true.
+Proof.
+  smt.
+Qed.
+	\end{minted}
+	\texttt{Z\_congBool} proves the 
+	congruence rule over integer 
+	to integer functions and 
+	\texttt{BV\_ulteZeroBool} proves 
+	that all 4-bit integers (bit-vectors 
+	of length 4) in their 
+	unsigned interpretation are 
+	greater than or equal to $0$. 
+	\texttt{Z.eqb} is the Boolean 
+	equality predicate over integers 
+	in Coq, and \texttt{bv\_ult}
+	and \texttt{bv\_eq} are 
+	respectively the Boolean 
+	less than (over unsigned integers)
+	and equality predicate for 
+	machine integers. Since 
+	predicates in these theories 
+	are expressed as Boolean terms, 
+	they need to be equated to 
+	\texttt{true} as shown above to 
+	be well-formed propositions in 
+	Coq. However, for some of these 
+	predicates, SMTCoq is able to 
+	prove their \texttt{Prop} version,
+	in addition to the \texttt{bool}
+	version. In other words, SMTCoq
+	is able to prove certain 
+	non-Boolean propositions in Coq.
+	To do this, it implements a 
+	\texttt{Prop} to \texttt{bool}
+	conversion for these predicates, 
+	so when a user asks SMTCoq to 
+	prove a proposition over one 
+	of these predicates, SMTCoq
+	converts it to a Boolean 
+	predicate, so that it now
+	suffices to prove the formula
+	over the Boolean predicate, 
+	which can be done by an SMT 
+	solver. As it turns out, 
+	the \texttt{Prop} to 
+	\texttt{Bool} conversion has 
+	been implemented for the 
+	predicates used above,
+	so SMTCoq can prove their 
+	corresponding \texttt{Prop}
+	theorems:
+	\begin{minted}{Coq}
+Theorem Z_congProp : forall (a b : Z) (f : Z -> Z), a = b -> 
+  f a = f b.
+Proof.
+  smt.
+Qed.
+	
+Theorem BV_ulteZeroProp : forall (b : bitvector 4), 
+  bv_ultP #b|0|0|0|0| b \/ b = #b|0|0|0|0|.
+Proof.
+  smt.
+Qed.
+	\end{minted}
+	The	\texttt{Prop} to \texttt{Bool} 
+	conversion of SMTCoq consists of 
+	applying proofs of equivalence 
+	between a \texttt{Prop} version
+	of a predicate and its \texttt{Bool}
+	version. For example, SMTCoq's 
+	bitvector library proves the 
+	following lemma of equivalence 
+	between the \texttt{Bool}
+	and \texttt{Prop} version of the 
+	unsigned less than predicate over
+	bit-vectors, which is applied 
+	by SMTCoq's \texttt{Prop} to 
+	\texttt{Bool} conversion when 
+	a user uses the \texttt{Prop}
+	version of this predicate in a 
+	query to SMTCoq, as in 
+	\texttt{BV\_ulteZeroProp}.
+	\begin{minted}{Coq}
+Theorem bv_ult_B2P : forall n (a b : bitvector n), 
+  bv_ult a b = true <-> bv_ultP a b.
+	\end{minted}
+	The \texttt{Prop} to \texttt{Bool}
+	conversion is possible for a predicate 
+	on a type, if that predicate is 
+	decidable --- that is, for every 
+	element of that type, the predicate 
+	either holds or doesn't hold. This 
+	decidability is proved via a lemma 
+	such as \texttt{bv\_ult\_B2P}. Some
+	of the lemmas used by the 
+	\texttt{Prop} to \texttt{Bool} 
+	conversion module are proved in SMTCoq's
+	libraries, others are proved in 
+	Coq's standard libraries. For 
+	example, Coq's library of integers
+	proves the equivalence between the 
+	Boolean and Propositional version 
+	of the less than predicate.
+	\begin{minted}{Coq}
+Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
+	\end{minted}
+	The module in SMTCoq that does
+	the conversion applies these 
+	equivalence lemmas to reduce a 
+	\texttt{Prop} predicate to a 
+	\texttt{Bool} one, before sending 
+	it to the SMT solver.	
+	
 	
 \bibliographystyle{abbrv}
 \bibliography{bib3}
