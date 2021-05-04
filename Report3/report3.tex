@@ -64,9 +64,11 @@
 	$False$, or $\bot$. A proof 
 	producing SMT solver is integrated 
 	with Coq by checking the proof 
-	inside of Coq, and this checker 
-	is proven correct to lift up 
-	the formula to a Coq formula via 
+	inside Coq for a particular 
+	representation of SMT formula in 
+	Coq. The checker is proven correct,
+	lifting up the formulas
+	to Coq formulas via a
 	process called computational 
 	reflection (described in Report 2).
 	
@@ -76,7 +78,7 @@
 	their logics. Propositions in 
 	Coq have the 
 	\texttt{Prop} type which are 
-	implemented as constructive
+	implemented a constructive
 	or intuitionistic logic. SMT
 	solvers, on the other hand, 
 	implement a classical logic. This
@@ -96,17 +98,116 @@
 	between the logics of SMT solvers
 	and Coq, and SMTCoq's efforts 
 	to prove formulas in Coq that 
-	SMT solvers can help with
+	SMT solvers can help with,
 	while being logically consistent.
 
 \section{Preliminaries}
 \label{sec:prelims}
+	Many-sorted first-order logic extends
+	first-order logic (FOL) with 
+	types or sorts. We present the 
+	syntax in this section and the 
+	semantics are presented in
+	\cite{Barrett2018}. Syntactically, 
+	the components of MSFOL are sorts 
+	$\sigma$, terms $t$, and 
+	formulas $\phi$. Sorts are 
+	atomic entities that 
+	represent types. Function types 
+	--- ($\sigma_1$, ..., $\sigma_n$) 
+	$\to$ $\sigma$ ---
+	and relation types 
+	--- ($\sigma_1$, ..., $\sigma_m$)
+	are defined over sorts, and 
+	are types of functions and 
+	predicates below. Terms $t$ and 
+	formulas $\phi$ are specified as:
+	\begin{align*}
+		t &:= x^{\sigma}\ |\ 
+		f^{(\sigma_1, ..., \sigma_n) \to 
+			\sigma}	(t_1, ..., t_n)\\
+		\phi &:= \bot\ |\ \neg \phi\ |\ 
+		\phi_1 \land \phi_2\ |\ \forall 
+		x^{\sigma} . \phi\ |\ t_1 = t_2
+		\ |\ P^{\sigma_1,...,\sigma_m}
+		(t_1, ..., t_m)
+	\end{align*}
+	Terms are either sorted variables, 
+	or applications of functions to terms.
+	Formulas are constants or logical 
+	connectives applied to other 
+	formulas, quantified formulas, 
+	equality over terms, or predicates 
+	over terms. Connectives $\top$, $\lor$, 
+	$\Rightarrow$, $\leftrightarrow$, and the 
+	existential	quantifier $\exists$ 
+	can be specified using the connectives 
+	and quantifiers mentioned above.
+	
+	A \textit{literal} is a term, or a 
+	formula with no connectives other than 
+	$\neg$. A \textit{clause} is a 
+	disjunction of literals. All formulas 
+	can be converted to conjunction normal 
+	form (CNF) which is a conjunction of 
+	clauses. For ease of notation, 
+	a formula in CNF is also represented
+	as a set of clauses within curly 
+	braces. $\bot$, the formula 
+	representing Boolean false, 
+	is overloaded to also represent
+	the empty clause, which is trivially
+	unsatisfiable (unlike the empty set,
+	or the empty conjunction which is 
+	trivially satisfiable).
+	
+	Informally, a formula is satisfiable
+	if there exists a satisfying model 
+	--- an assignment of well-sorted 
+	values to its variables such that 
+	the interpretation of the formula 
+	is $\top$; it is unsatisfiable if 
+	no such model exists; it is valid
+	if for all models its interpretation
+	is $\top$. This interpretation 
+	is recursively defined in 
+	Barrett et al.~\cite{Barrett2018}.
+	We use the notation 
+	$var \to val$ to signify the 
+	assigment of value $val$ to 
+	variable $var$, and group 
+	assignments in curly braces. 
+	For example, 
+	$a \to True$ assigns Boolean value 
+	$True$ to $a$. $\models$ stands for 
+	logical entailment and $\models_T$ 
+	stands for entailment in theory $T$. 
+	A formula is entailed from nothing, 
+	if it is valid. For example, 
+	$a \land b \models a$,
+	$x > 3 \models_{LIA} x > 0$, and 
+	$\models_{LIA} x > 3 \Rightarrow 
+	x > 0$ are all logically sound 
+	entailments --- the first one 
+	propositionally, and the
+	last two in the theory of linear 
+	integer arithmetic.
+	
+	Declarative rules of the form
+	\begin{center}
+		$\infer[rule\_name]{C}{P_1 & ... & P_n}$
+	\end{center}
+	specify that if the premises $P_1$ to 
+	$P_n$ hold, then the conclusion $C$
+	holds.
+	
+	
 
 \section{DPLL(T) Proofs}
 \label{sec:smtproofs}
 	The typical SMT solver composes 
 	a SAT solver with multiple theory
-	solver in an abstraction-refinement
+	solvers in an abstraction-refinement
 	cycle, where the SAT engine 
 	tries to find a satisfying 
 	assignment of the propositional
@@ -226,29 +327,7 @@
 	unsatisfiability, the algorithm 
 	backtracks and checks whether the 
 	formula is still unsatisfiable 
-	when the guess is flipped. In 
-	what follows, we often use the 
-	notation $var \to val$ to 
-	signify the assigment of value 
-	$val$ to variable $var$. For 
-	example, $a \to True$
-	assigns Boolean value $True$ to 
-	$a$. $\models$ stands for logical 
-	entailment and $\models_T$ stands 
-	for entailment in theory $T$. A 
-	formula is entailed from nothing, 
-	if it is valid. For example, 
-	$a \land b \models a$,
-	$x > 3 \models_{LIA} x > 0$, and 
-	$\models_{LIA} x > 3 \Rightarrow 
-	x > 0$ are all logically sound 
-	entailments --- the first one 
-	propositionally, and the
-	last two in the theory of linear 
-	integer arithmetic. Note that we 
-	refer to logical implication as 
-	$\Rightarrow$ in this section and 
-	use $\to$ for assignments.
+	when the guess is flipped.
 	
 	We now formalize the DPLL(T) algorithm 
 	as a state transition systems that 
@@ -487,16 +566,14 @@
 	\label{sec:transex}
 	We now look at an execution of the 
 	DPLL(T) algorithm, as presented in the 
-	previous section on an example input
+	previous section, on an example input
 	that demonstrates the usage of 
 	the rules. Consider the following 
-	CNF formula, where a set of terms 
-	represents their conjunction.
+	CNF formula:
 	\begin{center}
 		$ F: \{f(g(z)) = h(y) \lor x \neq y,\ \ 
 		f(g(z)) \neq h(y) \lor x \neq y,\ \ 
 		x = y \lor f(m) = f(n),\ \ 
-		f(m) \neq f(n) \lor x = y,\ \ 
 		f(m) = x,\ \ f(n) = y\}$
 	\end{center}
 	Each term contains 
@@ -515,8 +592,7 @@
 	abstraction of $F$.
 	\begin{center}
 		$\ F: \{A \lor \neg B,\ \neg A \lor 
-			\neg B,\ B \lor C,\ \neg C 
-			\lor B,\ D,\ E\}$
+			\neg B,\ B \lor C,\ D,\ E\}$
 	\end{center}
 
 	An execution of the DPLL(T) algorithm
@@ -854,7 +930,7 @@
 	type $P$ can be constructed.
 	For example, the following Coq
 	code proves the formula
-	$a \to a \lor b$, for any 
+	$a \Rightarrow a \lor b$, for any 
 	\texttt{Prop}s $a$ and $b$.
 	\begin{minted}{Coq}
 Theorem orIntroL : forall (a b: Prop), a -> a \/ b.

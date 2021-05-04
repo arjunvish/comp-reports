@@ -114,6 +114,14 @@
 	and their elements separated 
 	using commas (\texttt{,}).
 	
+	Declarative rules of the form
+	\begin{center}
+		$\infer[rule\_name]{C}{P_1 & ... & P_n}$
+	\end{center}
+	specify that if the premises $P_1$ to 
+	$P_n$ hold, then the conclusion $C$
+	holds.
+	
 	\subsection{Many-Sorted First-Order Logic}
 	\label{sec:msfol}
 	Many-sorted first-order logic extends
@@ -174,10 +182,8 @@
 	or the empty conjunction which is 
 	trivially satisfiable).
 	
-	Resolution is mentioned quite 
-	frequently in the document. The resolution 
-	rule simplifies two clauses 
-	to a new clause as follows:
+	The resolution rule simplifies two 
+	clauses to a new clause as follows:
 	\begin{center}
 		$\infer[resolution]{\phi_1 \lor ... \lor 
 			\phi_n \lor \psi_1 \lor ... \lor 
