@@ -755,11 +755,11 @@
 	these rules are involved in the 
 	refutation tree of the input). For 
 	instance, the $Prop$ rule is a 
-	resolution of a clause in $F$ and a 
-	set of literals in $M$; the $Expl$ 
-	rule modifies the current conflict 
-	clause by resolving it with an 
-	input clause.
+	repeated resolution of a clause in 
+	$F$ and a set of literals from $M$; 
+	the $Expl$ rule modifies the current 
+	conflict clause by resolving it with 
+	an input clause.
 	
 	Figure~\ref{fig:propproof} shows the 
 	proof tree for the unsatisfiability of 
@@ -767,7 +767,7 @@
 	Figure~\ref{fig:dplltex}. The nodes of 
 	the tree contain the clause being 
 	used. Every reduction of 
-	(a pair of) leaves to a child node 
+	(a pair of) nodes to a child node 
 	is an application of the resolution 
 	rule. The proof tree is guided by 
 	the application of $Confl$ and $Expl$ 
