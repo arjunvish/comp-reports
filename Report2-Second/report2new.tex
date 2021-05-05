@@ -276,8 +276,8 @@
 	
 	\begin{figure}
 		\begin{framed}
-			\textsc{Step 1}: Coq calls SMTCoq over 
-			a Boolean formula $F$:
+			\textsc{Step 1}: Coq tactic invokes SMTCoq
+			to prove theorem:
 			\begin{minted}{Coq}
 Theorem F : forall (a b c : bool), (b && negb c) || 
   (a && negb b) || negb a || c = true.
@@ -287,53 +287,66 @@ Proof.
 		\end{framed}
 		
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
 		\end{center}
-		
+	
 		\begin{framed}
+			\textsc{Step 2}: SMTCoq extracts Boolean 
+			term $B$ from \texttt{F} and creates a deep 
+			embedding \texttt{f} of $B$.
 			\begin{center}
-				\textsc{Step 2}: SMT solver 
-				proves $F$ and returns proof 
-				\texttt{t}. This step is 
-				expanded in Fig.~\ref{fig:smtex}
+				$B$: \texttt{(b \&\& negb c) || 
+				(a \&\& negb b) || negb a || c}
 			\end{center}
 		\end{framed}
 		
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
+		\end{center}
+	
+		\begin{framed}
+			\textsc{Step 3}: SMT solver 
+			proves unsatisfiability of $\neg B$ 
+			and returns proof \texttt{t}. This step 
+			is expanded in Fig.~\ref{fig:smtex}
+		\end{framed}
+		
+		\begin{center}
+			$\downarrow$
 		\end{center}
 		
 		\begin{framed}
-			\textsc{Step 3}: SMT Coq's checker 
-			checks deep embedding of $F$, 
-			\texttt{f}, against proof 
-			\texttt{t}:
+			\textsc{Step 4}: Call to SMTCoq's 
+			checker checks that \texttt{t}
+			proves unsatisfiability of 
+			\texttt{$\neg$f}:
 			\begin{center}
-				\texttt{checker f t = true}
+				$c\ :=\ $\texttt{checker f t = true}
 			\end{center}
 		\end{framed}
 		
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
 		\end{center}
 		
 		\begin{framed}
-			\textsc{Step 4}: Reflection principle 
+			\textsc{Step 5}: Reflection principle 
 			reflects deep embedding to shallow 
-			embedding $\mathbb{I}(\texttt{f})$:
+			embedding $\mathbb{I}(\texttt{f})$
+			via call to \texttt{checker} form 
+			Step 4:
 			\begin{center}
 				\texttt{checker\_correct f t 
-					(refl\_equal (checker 
-					f t) true)}
+					(refl\_equal $c$ true)}
 			\end{center}
 		\end{framed}
 		
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
 		\end{center}
 		
 		\begin{framed}
-			\textsc{Step 5}: Proof of $F$ is 
+			\textsc{Step 6}: Proof of \texttt{F} is 
 			completed in Coq:
 			\begin{minted}{Coq}
 Theorem F : forall (a b c : bool), (b && negb c) || 
@@ -343,9 +356,8 @@ Proof.
 Qed.
 			\end{minted}
 		\end{framed}
-		
 		\caption{SMTCoq's journey in proving 
-			example Boolean formula $F$}
+			example Boolean formula \texttt{F}}
 		\label{fig:smtcoqex}
 	\end{figure}
 	
@@ -365,16 +377,28 @@ Qed.
 	reflection. This is illustrated in 
 	Fig.~\ref{fig:smtcoqex} using a 
 	running example that is elaborated 
-	in the rest of the section.
+	in the rest of the section. The running
+	example is of a propositional formula
+	with no theory literals. This could be 
+	proved by a SAT solver. SMT solvers 
+	are able to deal with more expressive 
+	formulas than the one presented in the 
+	example here, but for simplicity
+	we don't involve theory reasoning
+	in the example. An example involving 
+	theory reasoning is used in Report 3 
+	to demonstrate how SMT solvers 
+	perform theory reasoning.
+
 	
 	\begin{figure}[t]
 		\begin{framed}
-			\textsc{Step 2.1}: $F$ is negated:
+			\textsc{Step 3.1}: $B$ is negated:
 			\begin{align*}
-			F&: (b \land \neg c) \lor 
+			B&: (b \land \neg c) \lor 
 			(a \land \neg b) \lor \neg a 
 			\lor c\\
-			\neg F&: \neg((b \land \neg c) 
+			\neg B&: \neg((b \land \neg c) 
 			\lor (a \land \neg b) \lor \neg 
 			a \lor c)
 			\end{align*}
@@ -385,7 +409,7 @@ Qed.
 		\end{center}
 		
 		\begin{framed}
-			\textsc{Step 2.2}: $\neg F$ after CNF 
+			\textsc{Step 3.2}: $\neg B$ after CNF 
 			conversion is checked for 
 			unsatisfiability by the SMT solver:
 			\begin{align*}
@@ -399,10 +423,9 @@ Qed.
 		\end{center}
 		
 		\begin{framed}
-			\textsc{Step 2.3}: SMT solver produces 
+			\textsc{Step 3.3}: SMT solver produces 
 			proof \texttt{t} of 
-			unsatisfiability of $\neg F$ or of
-			validity of $F$:
+			unsatisfiability of $\neg B$:
 			\begin{prooftree}
 				\AxiomC{$\neg c$}
 				\AxiomC{$\neg b \lor c$}
@@ -419,6 +442,60 @@ Qed.
 			formula $F$.}
 		\label{fig:smtex}
 	\end{figure}
+	
+	SMTCoq can be invoked within Coq 
+	using the \texttt{tactic} as shown 
+	in Step 1 of Fig.~\ref{fig:smtcoqex}.
+	Before involving the SMT solver, 
+	SMTCoq uses Coq tactics to extract
+	the Boolean term from a goal of this form:
+	\begin{center}
+		\texttt{forall $Q$, $B$ = true}.
+	\end{center}
+	where $Q$ is a vector of universal 
+	quantifiers, and $B$ is the Boolean
+	term that SMTCoq extracts. It performs 
+	this extraction using the \texttt{intros}
+	tactic in Coq that introduces the 
+	variables into the context, effectively
+	instantiating the quantifiers.
+	
+	SMTCoq implements a checker for 
+	SMT solver proofs (Step 4). It 
+	encodes the language of SMT solvers
+	in Coq as two different embeddings. 
+	Given a logical framework A, and 
+	a logical framework B, in which we 
+	want to represent the language of A, 
+	there are two ways to achieve this
+	representation, and 
+	both of these are necessary for 
+	reflection:
+	\begin{itemize}
+		\item \textit{Shallow Embedding: }
+		Use types and terms of B that 
+		correspond to those of A, to 
+		represent terms of A. A shallow
+		embedding of SMT formulas in 
+		Coq is Coq's \texttt{bool} 
+		type of Booleans. Such a 
+		shallow embedding of $B$
+		from our example
+		is created as \texttt{f} in 
+		Step 2 of Fig.~\ref{fig:smtcoqex}. 
+		\item\textit{Deep Embedding: }
+		Define custom types in B that 
+		correspond to those of A, and 
+		define inside B, the meaning of 
+		terms of these custom types with 
+		respect to shallow terms. A 
+		deep embedding of SMT formulas 
+		is defined as the type 
+		\texttt{form} in SMT solvers.
+		\texttt{f} from 
+		Fig.~\ref{fig:smtcoqex} has
+		type \texttt{form}.
+	\end{itemize}
 	
 	SMT solvers refutationally prove 
 	input formulas --- given a formula
@@ -438,11 +515,10 @@ Qed.
 	deriving the empty clause, which 
 	represents the most trivial
 	inconsistency in CNF, from the 
-	input clauses proves that the input 
-	clauses 
-	are unsatisfiable. A proof
+	negation of the input clauses proves 
+	that it is unsatisfiable. A proof
 	from an SMT solver is a tree 
-	with the input clauses (from the 
+	with the clauses (from the 
 	negation of the input formula) at
 	the leaves and $\bot$
 	at the root. The role of the SMT
@@ -451,42 +527,9 @@ Qed.
 	The SMT solver's proof creation is 
 	detailed in Report 3.
 	
-	SMTCoq implements a checker for 
-	SMT solver proofs (Step 3). It 
-	encodes the language of SMT solvers
-	in Coq as two different embeddings. 
-	Given a logical framework A, and 
-	a logical framework B, in which we 
-	want to represent the language of A, 
-	there are two ways to achieve this
-	representation, and 
-	both of these are necessary for 
-	reflection:
-	\begin{itemize}
-		\item \textit{Shallow Embedding: }
-		Use types and terms of B that 
-		correspond to those of A, to 
-		represent terms of A. A shallow
-		embedding of SMT formulas in 
-		Coq is Coq's \texttt{bool} 
-		type of Booleans.
-		\item\textit{Deep Embedding: }
-		Define custom types in B that 
-		correspond to those of A, and 
-		define inside B, the meaning of 
-		terms of these custom types with 
-		respect to shallow terms. A 
-		deep embedding of SMT formulas 
-		is defined as the type 
-		\texttt{form} in SMT solvers.
-		\texttt{f} from 
-		Fig.~\ref{fig:smtcoqex} has
-		type \texttt{form}.
-	\end{itemize}
-	
-	Given formula $F$, SMTCoq's proof 
+	Given Boolean term $B$, SMTCoq's proof 
 	checker checks the deep embedding of 
-	$F$ against the proof of $F$ from the 
+	$B$ against the proof of $B$ from the 
 	SMT solver. If the checker succeeds, 
 	SMTCoq is able to reflect the formula in 
 	the deep embedding to its shallow 
@@ -494,14 +537,15 @@ Qed.
 	correctness lemma for the checker
 	(also called the reflection principle),
 	which proves that for any 
-	formula in the deep embedding, if 
-	the checker is able to check an SMT
+	formula in the deep embedding, and 
+	proof of it from the SMT solver, if 
+	the checker able to check an SMT
 	proof against it, then the formula in 
 	the shallow embedding is true. A 
-	proof of $F$ in the shallow 
+	proof of $B$ in the shallow 
 	embedding is obtained by instantiating 
-	the correctness lemma with $F$.
-	Step 4 from Fig.~\ref{fig:smtcoqex} 
+	the correctness lemma with $B$.
+	Step 5 from Fig.~\ref{fig:smtcoqex} 
 	shows the instantiation of 
 	the reflection principle with 
 	the right objects to obtain the 
@@ -585,7 +629,7 @@ Qed.
 	an equivalence of two formulas; 
 	or, an if-then-else of three formulas.
 	\texttt{atom} is the type of atoms
-	or terms:
+	(or terms):
 	\begin{minted}{Coq}
 	Inductive atom : Type :=
 	| AppIntr (_ : op) (_: list atom)
@@ -631,10 +675,10 @@ Qed.
 	and a \texttt{state} represents the entire 
 	formula in CNF as an array of the 
 	respective conjuncts. Thus, the deep 
-	embedding of formula $F$ from our running 
+	embedding of formula $B$ from our running 
 	example, is the encoding of the set 
 	$\{\neg b \lor c, \neg a \lor b, a, 
-	\neg c\}$ from step 2.2 of 
+	\neg c\}$ from step 3.2 of 
 	Fig.~\ref{fig:smtex} 
 	as the following \texttt{state}:
 	\begin{align*}
@@ -650,9 +694,11 @@ Qed.
 	
 	The checker inputs a formula in its 
 	deep embedding, and a proof of the 
-	formula from the SMT solver, and 
+	unsatisfiability of its negation 
+	from the SMT solver, and 
 	returns \texttt{true} if the proof 
-	proves the formula, and 
+	proves the unsatisfiability of 
+	the formula, and 
 	\texttt{false} otherwise:
 	\begin{center}
 		\texttt{checker : form 
@@ -668,7 +714,7 @@ Qed.
 	Although all SMT solvers (that 
 	interface with SMTCoq) provide a
 	refutation tree as a proof, as 
-	illustrated in step 2.3 of 
+	illustrated in step 3.3 of 
 	Fig.~\ref{fig:smtex},
 	their proof formats vary. CVC4 uses 
 	LFSC~\cite{DBLP:journals/fmsd/StumpORHT13}
@@ -751,7 +797,8 @@ Qed.
 	The previous section describes a 
 	deep embedding of SMT formulas 
 	in Coq and a checker for 
-	proofs of these formulas (step 3 of 
+	refuatation proofs of their 
+	negations (step 3 of 
 	the running example in 
 	Fig.~\ref{fig:smtcoqex}). 
 	This infrastructure alone serves 
@@ -759,7 +806,7 @@ Qed.
 	SMT solver proofs in Coq.
 	SMTCoq, however, is able to 
 	do more than this, as demonstrated
-	in steps 4 and 5. In addition 
+	in steps 5 and 6. In addition 
 	to checking SMT solver proofs, 
 	it can lift these up to 
 	Boolean formulas in Coq and
@@ -811,33 +858,12 @@ Qed.
 	with \texttt{f, x,} and \texttt{y}
 	correctly typed. The shallow 
 	embedding for our running example 
-	is the formula from the lemma we 
-	are trying to prove in Coq
-	(Step 1 of fig.~\ref{fig:smtcoqex}):
+	is the Boolean term $B$
+	from Step 2 of fig.~\ref{fig:smtcoqex}):
 	\begin{center}
 		\texttt{(b \&\& negb c) || (a 
 			\&\& negb b) || negb a || c}
-	\end{center}	 
-	SMTCoq deals only with an effectively 
-	quantifier-free fragment of the SMT 
-	solver's logic. Even though quantifiers 
-	appear in the theorem in Coq (Step 1 of 
-	Fig.~\ref{fig:smtcoqex}), because
-	of the structure of universal 
-	quantification where all the variables
-	are quantified only in the beginning 
-	of the formula and the scope of 
-	each quantifier is the entire formula, 
-	it is straightforward
-	to instantiate away the quantifiers
-	using the \texttt{intros} tactic, which 
-	only leaves the quantifier-free 
-	formula in the proof context, and this 
-	is exactly what SMTCoq does. 
-	Thus, it suffices to consider the 
-	unquantified version of the 
-	formula from the example.
-	
+	\end{center}
 	The interpretation function 
 	has the following type.
 	\begin{center}
@@ -926,7 +952,7 @@ Qed.
 	forms of types.
 	
 	Returning to our running example, 
-	step 4 of 
+	step 5 of 
 	Fig.~\ref{fig:smtcoqex} illustrates
 	a call to the reflection principle by
 	SMTCoq. Given 

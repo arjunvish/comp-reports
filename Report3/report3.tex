@@ -883,7 +883,7 @@
 			f(m) = f(n) \land f(m) = x \land
 			f(n) = y \land x \neq y
 	\end{align*}
-	Finaly, the proof tree from the 
+	Finally, the proof tree from the 
 	theory solver of $L$, or EUF Proof from 
 	Figure~\ref{fig:propproof}, uses the 
 	conjuncts of $\neg L$ as leaves --- $C, D, E, 
@@ -956,7 +956,7 @@ Qed.
 	proposition being proven, and the 
 	context is empty, and the user
 	can manipulate the goal to break 
-	it down and move over some of its 
+	it down and move over its 
 	constituents into the context
 	using Coq functions called 
 	\textit{tactics}. The first line of the 
@@ -1030,7 +1030,8 @@ Abort.
 	equated to \texttt{true}. 
 	For example, the law of 
 	excluded middle for 
-	\texttt{a : bool} is stated as 
+	\texttt{a : bool} is stated in 
+	Coq as: 
 	\begin{center}
 		\texttt{a || (negb a)}
 	\end{center}
@@ -1072,7 +1073,7 @@ Qed.
 	\texttt{true}, both equalities
 	are provable. Notice that, 
 	neither a proof of $a$, nor 
-	a proof of $\neg a$ were 
+	a proof of $\neg a$ was 
 	constructed here. Arguments were
 	made in terms of every possible 
 	value $a$ could take, and the
@@ -1102,7 +1103,8 @@ Qed.
 	as a \textit{deep embedding} of Boolean 
 	formulas in Coq, and \textit{reflects} 
 	proofs of \texttt{form}s from the SMT 
-	solver to proofs of Boolean formulas, 
+	solver to proofs of \texttt{Bool} 
+	formulas, 
 	the shallow embedding of formulas 
 	in Coq. A checker in Coq checks 
 	proofs from the SMT solver against
