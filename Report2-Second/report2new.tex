@@ -97,9 +97,9 @@
 	solver's proof, which is typically 
 	large, inside Coq, making it a
 	potentially time consuming process. 
-	We look in detail into both these 
-	approaches of integrating SMT solvers 
-	with ITPs.
+	We look at the details involved in both 
+	these approaches of integrating 
+	SMT solvers with ITPs.
 	
 	\section{Preliminaries}
 	\label{sec:prelims}
@@ -182,7 +182,7 @@
 	or the empty conjunction which is 
 	trivially satisfiable).
 	
-	The resolution rule simplifies two 
+	\noindent The resolution rule simplifies two 
 	clauses to a new clause as follows:
 	\begin{center}
 		$\infer[resolution]{\phi_1 \lor ... \lor 
@@ -207,6 +207,20 @@
 	the combination of the two clauses 
 	without either occurrence of the 
 	pivot holds.
+	
+	A formula as defined above is 
+	represented in Coq usin Coq's
+	\texttt{Prop} type (for 
+	propositions). Coq terms 
+	of type \texttt{Bool} (for 
+	Booleans) are represented as 
+	propostions by equating them 
+	to the Boolean value \texttt{true}.
+	With some abuse of notation, 
+	we refer to Coq Boolean terms 
+	as Coq Boolean formulas, 
+	since they correspond to formulas 
+	from the grammar defined above.
 	
 	\subsection{Higher-Order Logic}
 	\label{sec:hol}
@@ -275,6 +289,7 @@
 	shared with the SAT	solver integration.
 	
 	\begin{figure}
+		\vspace{-1.3in}
 		\begin{framed}
 			\textsc{Step 1}: Coq tactic invokes SMTCoq
 			to prove theorem:
@@ -388,7 +403,8 @@ Qed.
 	in the example. An example involving 
 	theory reasoning is used in Report 3 
 	to demonstrate how SMT solvers 
-	perform theory reasoning.
+	perform theory reasoning and produce
+	proofs.
 
 	
 	\begin{figure}[t]
@@ -444,7 +460,7 @@ Qed.
 	\end{figure}
 	
 	SMTCoq can be invoked within Coq 
-	using the \texttt{tactic} as shown 
+	using the \texttt{smt} tactic as shown 
 	in Step 1 of Fig.~\ref{fig:smtcoqex}.
 	Before involving the SMT solver, 
 	SMTCoq uses Coq tactics to extract
@@ -456,37 +472,42 @@ Qed.
 	quantifiers, and $B$ is the Boolean
 	term that SMTCoq extracts. It performs 
 	this extraction using the \texttt{intros}
-	tactic in Coq that introduces the 
-	variables into the context, effectively
-	instantiating the quantifiers.
+	tactic in Coq that instantiates the 
+	universal quantifers by introducing 
+	the variables into the proof context.
 	
 	SMTCoq implements a checker for 
 	SMT solver proofs (Step 4). It 
 	encodes the language of SMT solvers
 	in Coq as two different embeddings. 
-	Given a logical framework A, and 
-	a logical framework B, in which we 
-	want to represent the language of A, 
+	Given a logical framework X, and 
+	a logical framework Y, in which we 
+	want to represent the language of X, 
 	there are two ways to achieve this
 	representation, and 
 	both of these are necessary for 
 	reflection:
 	\begin{itemize}
 		\item \textit{Shallow Embedding: }
-		Use types and terms of B that 
-		correspond to those of A, to 
-		represent terms of A. A shallow
+		Use types and terms of Y that 
+		correspond to those of X, to 
+		represent terms of X. A shallow
 		embedding of SMT formulas in 
 		Coq is Coq's \texttt{bool} 
-		type of Booleans. Such a 
-		shallow embedding of $B$
-		from our example
-		is created as \texttt{f} in 
-		Step 2 of Fig.~\ref{fig:smtcoqex}. 
+		type of Booleans. The Boolean 
+		term $B$ from step 2 of 
+		Fig.~\ref{fig:smtcoqex}
+		is the shallow embedding of SMT 
+		formula $B$ from step 3.1 of 
+		Fig.~\ref{fig:smtex}
+		They are given the same name because 
+		they represent the same formula, but 
+		are technically different from each 
+		other.
 		\item\textit{Deep Embedding: }
-		Define custom types in B that 
-		correspond to those of A, and 
-		define inside B, the meaning of 
+		Define custom types in Y that 
+		correspond to those of X, and 
+		define inside Y, the meaning of 
 		terms of these custom types with 
 		respect to shallow terms. A 
 		deep embedding of SMT formulas 
@@ -494,7 +515,8 @@ Qed.
 		\texttt{form} in SMT solvers.
 		\texttt{f} from 
 		Fig.~\ref{fig:smtcoqex} has
-		type \texttt{form}.
+		type \texttt{form}, and is 
+		the deep embedding of $B$.
 	\end{itemize}
 	
 	SMT solvers refutationally prove 
@@ -527,21 +549,25 @@ Qed.
 	The SMT solver's proof creation is 
 	detailed in Report 3.
 	
-	Given Boolean term $B$, SMTCoq's proof 
-	checker checks the deep embedding of 
-	$B$ against the proof of $B$ from the 
-	SMT solver. If the checker succeeds, 
-	SMTCoq is able to reflect the formula in 
+	Given a deep embedding of 
+	Boolean term $B$, and a proof of 
+	unsatisfiability of $\neg B$
+	from the SMT solver, SMTCoq's proof 
+	checker checks that the proof proves
+	the unsatisfiability of $\neg B$. If the 
+	checker succeeds, SMTCoq is able to 
+	reflect the formula in 
 	the deep embedding to its shallow 
 	embedding. This is done via a 
 	correctness lemma for the checker
 	(also called the reflection principle),
 	which proves that for any 
 	formula in the deep embedding, and 
-	proof of it from the SMT solver, if 
-	the checker able to check an SMT
-	proof against it, then the formula in 
-	the shallow embedding is true. A 
+	proof of the unsatisfiability of its 
+	negation from the SMT solver, if 
+	the checker returns \texttt{true}, 
+	then the formula in 
+	the shallow embedding holds. A 
 	proof of $B$ in the shallow 
 	embedding is obtained by instantiating 
 	the correctness lemma with $B$.
@@ -787,7 +813,7 @@ Qed.
 	architecture of the checker is 
 	illustrated in
 	Fig.~\ref{fig:checker}. The phases 
-	of SMT solver operation and the 
+	of SMT solver's operation and the 
 	corresponding steps of the
 	SMT solver's proof are elaborated
 	in Report 3.
@@ -872,8 +898,8 @@ Qed.
 	\end{center}
 	Given a \texttt{form} \texttt{f} 
 	and a valuation $\nu$ of free 
-	variables in \texttt{f}, the 
-	interpretation function returns 
+	variables in \texttt{f} 
+	the interpretation function returns 
 	the shallow embedding of \texttt{f}
 	with the variables in \texttt{f} 
 	assigned values as specified by 
@@ -968,7 +994,7 @@ Qed.
 	\end{center}
 	where \texttt{refl\_equal} 
 	(reflexivity of equality) is a tactic
-	that forces the Coq type checker to 
+	that forces the Coq type-checker to 
 	perform an equality check between 
 	\texttt{checker f t} and 
 	\texttt{true} by reduction. 
@@ -979,7 +1005,7 @@ Qed.
 	Coq's reduction mechanism is 
 	invoked on \texttt{checker f t},
 	which usually consists of checking
-	a large non-trivial SMT certificate. 
+	a large non-trivial proof certificate. 
 	SMTCoq uses various optimizations 
 	to make these computations efficient.
 	As alluded to in the previous section,
@@ -1005,7 +1031,7 @@ Qed.
 	\texttt{true}.
 	
 	The checker divides certificates
-	into steps that can independently 
+	into steps that can be independently 
 	checked by small checkers.
 	Similarly, the correctness lemma
 	of the checker also depends on 
@@ -1022,16 +1048,14 @@ Qed.
 	performs sound steps - that is,
 	the step doesn't change the 
 	satisfiability or unsatisfiability
-	of the state. With these proofs
-	of correctness from the step 
-	checkers, if the steps do 
-	convert the input formula 
-	to $\bot$, then it is 
-	straightforward for 
-	\texttt{checker}
-	to conclude that the 
-	(negation of the) input is 
-	unsatisfiable. The division 
+	of the state. It is straighforward
+	to compose these proofs 
+	of correctness of the small 
+	checkers, into that of
+	\texttt{checker} (although
+	it is not straightforward 
+	to prove the small checkers 
+	correct). The division 
 	of a proof into steps and 
 	the division of the main 
 	checker into checkers for these
