@@ -631,8 +631,10 @@ Qed.
 	and simpler version is presented 
 	below. 
 	
+	\medskip
+	
 	\texttt{form} is the type of 
-	formulas:
+	SMT formulas:
 	\begin{minted}{coq}
 	Inductive form : Type :=
 	| Fatom (_ : atom)
@@ -654,7 +656,9 @@ Qed.
 	formulas; an exclusive-or or
 	an equivalence of two formulas; 
 	or, an if-then-else of three formulas.
-	\texttt{atom} is the type of atoms
+	
+	\medskip
+	\texttt{atom} is the type of SMT atoms
 	(or terms):
 	\begin{minted}{Coq}
 	Inductive atom : Type :=
@@ -680,19 +684,16 @@ Qed.
 	functions from each theory.
 	Some examples of atoms are 
 	\begin{itemize}
+		\item \texttt{AppUnintr	1 []} for $x$,
+			where $x$ has index $1$.
+		\item \texttt{AppUnintr 2 []} for $y$,
+			with index $2$ for $y$.
 		\item \texttt{AppUnintr 0 [AppUnintr 
 			1 []]} for the term $f(x)$ where 
-		$f$ has index $0$, and $x$ has 
-		index $1$; 
+			$f$ has index $0$.
 		\item \texttt{AppIntr Zplus [(AppIntr 
 			(Zcst 5) []); (AppUnintr 2 [])]} 
-		for the term $5 + y$ where $y$ 
-		has index $2$.
-		\item Recursively, from the previous example,
-		\texttt{AppUnintr
-			1 []} for $x$.
-		\item Recursively, from the previous example,
-		\texttt{AppUnintr 2 []} for $y$.
+		for the term $5 + y$.
 	\end{itemize}
 	Finally, for convenience of representing 
 	CNF formulas in SMTCoq, a \texttt{clause} 
@@ -718,25 +719,18 @@ Qed.
 	where $a, b,$ and $c$ are indexed as 
 	$0, 1,$ and $2$.
 	
-	The checker inputs a formula in its 
-	deep embedding, and a proof of the 
-	unsatisfiability of its negation 
-	from the SMT solver, and 
-	returns \texttt{true} if the proof 
-	proves the unsatisfiability of 
-	the formula, and 
-	\texttt{false} otherwise:
+	Given deep embedding 
+	\texttt{f} of type \texttt{form}
+	and proof object \texttt{t} of type 
+	\texttt{T}, the checker returns 
+	\texttt{true} if its able to 
+	check that \texttt{t} is a proof
+	of unsatisfiability of \texttt{$\neg$f},
+	and \texttt{false} otherwise.
 	\begin{center}
 		\texttt{checker : form 
 			$\to$ T $\to$ bool}	
 	\end{center}
-	More specifically, given deep embedding 
-	\texttt{f} of type \texttt{form}
-	and proof object \texttt{t} of type 
-	\texttt{T}, it checks whether \texttt{t} 
-	from the SMT solver is a proof of  
-	unsatisfiability of	\texttt{$\neg$f}, and 
-	returns \texttt{true} if it is. 
 	Although all SMT solvers (that 
 	interface with SMTCoq) provide a
 	refutation tree as a proof, as 
@@ -759,7 +753,10 @@ Qed.
 	that these translators are outside 
 	Coq's trusted kernel, but are kept
 	small, and tested using a large 
-	set of benchmarks. 
+	set of benchmarks. However, they
+	don't reduce SMTCoq's soundness
+	guarantees since a mistranslated
+	proof will not check.
 	
 	\begin{figure}[t]
 		\begin{center}
@@ -823,7 +820,7 @@ Qed.
 	The previous section describes a 
 	deep embedding of SMT formulas 
 	in Coq and a checker for 
-	refuatation proofs of their 
+	refutation proofs of their 
 	negations (step 3 of 
 	the running example in 
 	Fig.~\ref{fig:smtcoqex}). 

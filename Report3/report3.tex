@@ -68,7 +68,7 @@
 	representation of SMT formula in 
 	Coq. The checker is proven correct,
 	lifting up the formulas
-	to Coq formulas via a
+	to Coq formulas over Booleans via a
 	process called computational 
 	reflection (described in Report 2).
 	
@@ -77,8 +77,8 @@
 	Coq is the incompatibility of 
 	their logics. Propositions in 
 	Coq have the 
-	\texttt{Prop} type which are 
-	implemented a constructive
+	\texttt{Prop} type which 
+	implements a constructive
 	or intuitionistic logic. SMT
 	solvers, on the other hand, 
 	implement a classical logic. This
@@ -86,7 +86,7 @@
 	SMTCoq by using SMT solvers to 
 	prove Boolean formulas in 
 	Coq (of type \texttt{Bool})
-	that are classical, while also 
+	that are classical, and additionally, 
 	supporting a fragment of 
 	propositions that don't violate 
 	the laws of constructive logic.
@@ -168,7 +168,7 @@
 	the interpretation of the formula 
 	is $\top$; it is unsatisfiable if 
 	no such model exists; it is valid
-	if for all models its interpretation
+	if, for all models its interpretation
 	is $\top$. This interpretation 
 	is recursively defined in 
 	Barrett et al.~\cite{Barrett2018}.
@@ -210,11 +210,12 @@
 	solvers in an abstraction-refinement
 	cycle, where the SAT engine 
 	tries to find a satisfying 
-	assignment of the propositional
+	model of the propositional
 	abstraction of a given set of 
 	constraints, and the theory
 	solvers find a refutation of 
-	the refinement, if one exists.
+	the refinement of the model, if 
+	one exists.
 	This cycle is guided by the 
 	DPLL(T) algorithm, which is an
 	extension of the 
@@ -238,8 +239,7 @@
 		$\infer{a \lor c}{a \lor \neg b 
 			& b \lor c}$
 	\end{center}
-	Given that two clauses (a clause 
-	is a disjunction of literals) hold, 
+	Given that two clauses hold, 
 	and a \textit{pivot}, which is a 
 	literal that occurs with opposite 
 	polarities in each clause ($b$ in 
@@ -255,10 +255,14 @@
 	conjunction of clauses. The 
 	DPLL(T) algorithm then tries 
 	to find a satisfying assignment 
-	for these clauses, and in the 
-	case that one doesn't exist,
-	resolves these clauses to 
-	conclude the empty clause 
+	for these clauses, and 
+	otherwise, by exhaustion 
+	concludes their unsatisfiability.
+	The steps taken to conclude 
+	the unsatisfiability can be 
+	translated into a chain of 
+	resolutions of the input clauses 
+	to conclude the empty clause 
 	$\bot$ from them, which is the 
 	most basic form of unsatisfiability.
 	
@@ -272,8 +276,7 @@
 	called \textit{theory lemmas}, 
 	which are the theory solvers' 
 	means of refining the SAT solver's
-	model (a model assigns values 
-	to variables) for the input. A
+	model for the input. A
 	theory lemma, produced by the 
 	corresponding theory
 	solver, is a clause that is
@@ -296,7 +299,8 @@
 	\label{sec:dpllt}
 	
 	DPLL(T) is originally presented 
-	in Nieuwenhuis et al.~\cite{DBLP:journals/jacm/NieuwenhuisOT06}, 
+	in Nieuwenhuis et 
+	al.~\cite{DBLP:journals/jacm/NieuwenhuisOT06}, 
 	and reiterated in Katz et 
 	al.~\cite{DBLP:conf/fmcad/KatzBTRH16} 
 	as a transition system. We briefly present 
@@ -314,8 +318,8 @@
 	algorithm can be understood as 
 	trying to satisfy the input constraints
 	at the propositional level, with 
-	refinements from theory solvers
-	about models. Checking whether a
+	refinements of models from 
+	theory solvers. Checking whether a
 	formula is unsatisfiable at the 
 	propositional level involves 
 	incrementally assigning literals
@@ -560,7 +564,22 @@
 	if an execution starting with 
 	$\langle \phi, F, \phi \rangle$ ends 
 	with $fail$, then $F$ is 
-	unsatisfiable in $T$.
+	unsatisfiable in $T$. Under suitable 
+	restrictions on the theory $T$ 
+	involved, it is also 
+	\textit{complete}: for every exhausted
+	execution (an execution in which no 
+	rule other than $Learn_T$ applies)
+	starting with 
+	$\langle \phi, F, \phi \rangle$,
+	and ending with 
+	$\langle M, F_0, \phi \rangle$,
+	$M$ is a satisfying model of 
+	$F_0$ (equisatisfiable with $F$)
+	in $T$.
+	Completeness guarantees are lost with
+	most quantified theories.
+	
 	
 	\subsection{DPLL(T) Transition Example}
 	\label{sec:transex}
@@ -707,7 +726,7 @@
 	\lor B$, but since this conflict 
 	came in a context where a decision
 	was made, the decision is reversed
-	in Step 12, after the conflict clause 
+	in step 12, after the conflict clause 
 	is simplified and learned. In step 15, 
 	when the same lemma is found to be 
 	conflicting with the new context, we 
@@ -732,8 +751,9 @@
 	to derive $\bot$ from it. This is why, 
 	in proof mode, the SMT solver, only 
 	applies the final $Fail$ rule after 
-	reducing the conflict clause to $\bot$. 
-	This is done from step 15 to 21.
+	reducing the conflict clause to $\bot$
+	using explanations. This is done 
+	from step 15 to 21.
 	
 	\subsection{DPLL(T) Proof Example}
 	\label{sec:proofex}
@@ -781,7 +801,7 @@
 	of the $Expl$ from 
 	Figure~\ref{fig:dplltex}.
 	The left subtree is a proof of 
-	$\neg A$,which is learned in steps 
+	$\neg A$, which is learned in steps 
 	1 to 11, and the right subtree is the 
 	proof of $A$ which is concluded from 
 	steps 12 to 20. Step 21 performs 
@@ -851,14 +871,12 @@
 	justified by satellite proofs 
 	from the theory solver that produce 
 	them, as shown in 
-	Figure~\ref{fig:propproof}. The theory 
-	solvers that produce the theory lemmas
-	are also responsible for justifying 
-	these lemmas. So, in the refutation 
+	Figure~\ref{fig:propproof}. The 
+	refutation 
 	tree of the input produced by the 
-	SAT solver, there are theory lemmas 
-	at the leaves, which need to be 
-	justified by proof trees 
+	SAT solver contains theory lemmas 
+	at the leaves, which are
+	supported by proof trees 
 	from the theory solver. These 
 	are often proved by contradiction: 
 	given a lemma $L$, a proof of $L$, 
@@ -1021,13 +1039,17 @@ Abort.
 	be inspected, pattern matched on,
 	and evaluated to either 
 	\texttt{true} or \texttt{false}.
-	Formulas over the type 
-	\texttt{bool} are not theorems
+	Terms of type \texttt{bool} 
+	cannot, by themselves, be 
+	stated as theorems
 	in Coq, since they don't have 
 	the \texttt{Prop} type. To 
-	state a Boolean formula in a 
-	Coq proposition, the formula is 
-	equated to \texttt{true}. 
+	state that a Boolean term holds
+	for arbitrary values of its variables,
+	the term is 
+	equated to \texttt{true}
+	and its variables are 
+	universally quantified. 
 	For example, the law of 
 	excluded middle for 
 	\texttt{a : bool} is stated in 
@@ -1085,8 +1107,8 @@ Qed.
 	Since SMT solvers implement 
 	a classical logic, SMTCoq 
 	uses SMT solver proofs to 
-	prove classical formulas in 
-	Coq over Booleans. The 
+	prove classical formulas 
+	expressed in Coq using Booleans. The 
 	\texttt{LEMBool} lemma from 
 	above would be a simple goal that 
 	could be dispatched to an SMT 
@@ -1104,11 +1126,14 @@ Qed.
 	formulas in Coq, and \textit{reflects} 
 	proofs of \texttt{form}s from the SMT 
 	solver to proofs of \texttt{Bool} 
-	formulas, 
+	terms, 
 	the shallow embedding of formulas 
 	in Coq. A checker in Coq checks 
 	proofs from the SMT solver against
-	the deep embedding of formulas, and 
+	the deep embedding of formulas
+	(it checks that the SMT solver proves 
+	the unsatisfiability of the negation
+	of the deep embedding of the formula), and 
 	the reflection principle is a proof
 	of correctness of the checker, that 
 	is used by SMTCoq to prove classical
