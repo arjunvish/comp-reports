@@ -103,6 +103,15 @@
 	
 	\section{Preliminaries}
 	\label{sec:prelims}
+	Proof calculi are specified in this 
+	document using declarative rules of 
+	the form
+	\begin{center}
+		$\infer[rule\_name]{C}{P_1 & ... & P_n}$
+	\end{center}
+	which specifies that if the premises $P_1$ to 
+	$P_n$ hold, then the conclusion $C$
+	holds.
 	
 	In both Coq and Isabelle/HOL,
 	lists are constructed using 
@@ -113,14 +122,6 @@
 	curly braces (\texttt{\{ \}})
 	and their elements separated 
 	using commas (\texttt{,}).
-	
-	Declarative rules of the form
-	\begin{center}
-		$\infer[rule\_name]{C}{P_1 & ... & P_n}$
-	\end{center}
-	specify that if the premises $P_1$ to 
-	$P_n$ hold, then the conclusion $C$
-	holds.
 	
 	\subsection{Many-Sorted First-Order Logic}
 	\label{sec:msfol}
@@ -154,12 +155,14 @@
 	(t_1, ..., t_m)
 	\end{align*}
 	Terms are either sorted variables, 
-	or applications of functions to terms.
+	or applications of sorted function
+	symbols to terms.
 	Formulas are constants or logical 
 	connectives applied to other 
 	formulas, quantified formulas, 
-	equality over terms, or predicates 
-	over terms. Connectives $\lor$, 
+	equality over terms, or predicates
+	symbols applied to terms. Connectives 
+	$\lor$, 
 	$\to$, $\leftrightarrow$, and the 
 	existential	quantifier $\exists$ 
 	can be specified using the connectives 
@@ -197,8 +200,7 @@
 		$\infer{a \lor c}{a \lor \neg b 
 			& b \lor c}$
 	\end{center}
-	Given that two clauses (a clause 
-	is a disjunction of literals) hold, 
+	Given that two clauses hold, 
 	and a \textit{pivot}, which is a 
 	literal that occurs with opposite 
 	polarities in each clause ($b$ in 
@@ -209,18 +211,37 @@
 	pivot holds.
 	
 	A formula as defined above is 
-	represented in Coq usin Coq's
+	represented in Coq using Coq's
 	\texttt{Prop} type (for 
 	propositions). Coq terms 
 	of type \texttt{Bool} (for 
 	Booleans) are represented as 
-	propostions by equating them 
+	propositions by equating them 
 	to the Boolean value \texttt{true}.
-	With some abuse of notation, 
-	we refer to Coq Boolean terms 
-	as Coq Boolean formulas, 
-	since they correspond to formulas 
-	from the grammar defined above.
+	We differentiate these from 
+	propositions in Coq by referring to 
+	them as \textit{Boolean goals}.
+	For instance, the following 
+	proposition specifies one of the 
+	conjunction elimination rules
+	($\forall\ a\ b,\ a \land b \to a$) in 
+	Coq as a proposition.
+	\begin{center}
+		\texttt{$\forall$ a b : Prop,
+			a $\land$ b -> a}
+	\end{center}
+	An equivalent Boolean goal is:
+	\begin{center}
+		\texttt{$\forall$ a b : bool,
+			implb (a \&\& b) a = true}
+	\end{center}
+	SMTCoq is able to prove such Boolean 
+	goals and a fragment of propositional
+	goals in Coq. The limits of SMTCoq's 
+	abilities in proving propositional and 
+	Boolean goals are discussed in report 3. 
+	Here, we study how SMTCoq proves Boolean 
+	goals. 
 	
 	\subsection{Higher-Order Logic}
 	\label{sec:hol}
@@ -252,10 +273,10 @@
 	and integers --- \texttt{Int}.
 	Note that $\texttt{Bool}$ is the 
 	type of Booleans in higher-order
-	logic (used only in 
+	logic (used in 
 	Sec.~\ref{sec:hammer}), different
 	from \texttt{bool} which is the 
-	type of Booleans in Coq (used only 
+	type of Booleans in Coq (used 
 	in Sec.~\ref{sec:smtcoq}).
 	Terms are typed variables, 
 	typed constants, applications 
@@ -401,7 +422,7 @@ Qed.
 	example here, but for simplicity
 	we don't involve theory reasoning
 	in the example. An example involving 
-	theory reasoning is used in Report 3 
+	theory literals is used in Report 3 
 	to demonstrate how SMT solvers 
 	perform theory reasoning and produce
 	proofs.
