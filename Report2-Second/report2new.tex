@@ -25,6 +25,11 @@
 \newcommand{\rem}[1]{\textcolor{red}{[#1]}}
 \newcommand{\ed}[1]{\textcolor{blue}{#1}}
 \newcommand{\ct}[1]{\rem{#1 --ct}}
+\newcommand{\avar}{Fatom (AppUnintr 0 [])}
+\newcommand{\bvar}{Fatom (AppUnintr 1 [])}
+\newcommand{\cvar}{Fatom (AppUnintr 2 [])}
+\newcommand{\fnot}[1]{Fnot (#1)}
+\newcommand{\intr}[1]{\mathbb{I}_{\nu}(#1)}
 
 \begin{document}
 	\title{Comprehensive Exam Report 2 - Relating Higher Order and First-Order Logics}
@@ -64,7 +69,8 @@
 	SMT solvers can guide ITPs in 
 	finding proofs for formulas - 
 	a process called \textit{proof 
-	search}. To assist ITPs in automation
+	search}. To assist ITPs in the 
+	automation
 	of proof search, the proof object from 
 	the SMT solver guides the proof search 
 	in the ITP via a process called
@@ -113,6 +119,18 @@
 	$P_n$ hold, then the conclusion $C$
 	holds.
 	
+	A goal in Coq is proved by 
+	manipulating a \emph{proof 
+	context} that initially consists 
+	of the entire goal, that can be 
+	broken down into smaller parts. 
+	Coq offers functions called 
+	\textit{tactics} that help manipulate 
+	the proof context and find proof 
+	terms for goals. We refer
+	to some Coq tactics and 
+	explain them inline.
+	
 	In both Coq and Isabelle/HOL,
 	lists are constructed using 
 	square brackets (\texttt{[ ]})
@@ -121,13 +139,13 @@
 	Arrays are constructed using 
 	curly braces (\texttt{\{ \}})
 	and their elements separated 
-	using commas (\texttt{,}).
+	using commas (\texttt{,}). 
 	
 	\subsection{Many-Sorted First-Order Logic}
 	\label{sec:msfol}
 	Many-sorted first-order logic extends
 	first-order logic (FOL) with 
-	types or sorts. We present the 
+	types (or sorts). We present the 
 	syntax in this section and the 
 	semantics are presented in
 	\cite{Barrett2018}. Syntactically, 
@@ -142,7 +160,7 @@
 	--- ($\sigma_1$, ..., $\sigma_m$)
 	are defined over sorts, and 
 	are types of functions and 
-	predicates below. Terms $t$ and 
+	predicates. Terms $t$ and 
 	formulas $\phi$ are specified as:
 	\begin{align*}
 	t &:= x^{\sigma}\ |\ 
@@ -177,8 +195,8 @@
 	clauses. For ease of notation, 
 	a formula in CNF is also represented
 	as a set of clauses within curly 
-	braces. $\bot$, the formula 
-	representing Boolean false, 
+	braces. $\bot$, the symbol
+	representing false, 
 	is overloaded to also represent
 	the empty clause, which is trivially
 	unsatisfiable (unlike the empty set,
@@ -214,7 +232,7 @@
 	represented in Coq using Coq's
 	\texttt{Prop} type (for 
 	propositions). Coq terms 
-	of type \texttt{Bool} (for 
+	of type \texttt{bool} (for 
 	Booleans) are represented as 
 	propositions by equating them 
 	to the Boolean value \texttt{true}.
@@ -328,10 +346,10 @@ Proof.
 	
 		\begin{framed}
 			\textsc{Step 2}: SMTCoq extracts Boolean 
-			term $B$ from \texttt{F} and creates a deep 
-			embedding \texttt{f} of $B$.
+			term \texttt{B} from \texttt{F} and creates a deep 
+			embedding \texttt{f} of \texttt{B}.
 			\begin{center}
-				$B$: \texttt{(b \&\& negb c) || 
+				\texttt{B}: \texttt{(b \&\& negb c) || 
 				(a \&\& negb b) || negb a || c}
 			\end{center}
 		\end{framed}
@@ -343,6 +361,7 @@ Proof.
 		\begin{framed}
 			\textsc{Step 3}: SMT solver 
 			proves unsatisfiability of $\neg B$ 
+			(the SMT encoding of $\neg$\texttt{B}) 
 			and returns proof \texttt{t}. This step 
 			is expanded in Fig.~\ref{fig:smtex}
 		\end{framed}
@@ -412,8 +431,7 @@ Qed.
 	in a process called computational 
 	reflection. 
 	
-	\begin{example} 
-	\em This is illustrated in 
+	This is illustrated in 
 	Fig.~\ref{fig:smtcoqex} using a 
 	running example that is elaborated 
 	in the rest of the section. The running
@@ -429,6 +447,33 @@ Qed.
 	to demonstrate how SMT solvers 
 	perform theory reasoning and produce
 	proofs.
+	
+	SMTCoq can be invoked within Coq 
+	using the \texttt{smt} tactic.
+	Before involving the SMT solver, 
+	SMTCoq uses Coq tactics to extract
+	the Boolean term from a
+	Boolean goal of this form:
+	\begin{center}
+		\texttt{forall $Q$, \texttt{B} = true}.
+	\end{center}
+	where $Q$ is a vector of universally 
+	quantified variables that appear in 
+	\texttt{B}, and \texttt{B} is the Boolean
+	term that SMTCoq extracts. It performs 
+	this extraction using the \texttt{intros}
+	tactic in Coq that instantiates the 
+	universal quantifiers by introducing 
+	the variables into the proof context.
+	
+	\begin{example} 
+	\em In Step 1 of Fig.~\ref{fig:smtcoqex},
+	SMTCoq is invoked via the \texttt{smt}
+	tactic on a Boolean goal (\texttt{F}) representing 
+	the formula $\forall\ a\ b\ c,\ (b \land \neg c) 
+	\lor (a \land \neg b) \lor \neg a \lor c$.
+	The Boolean term \texttt{B} is extracted in Step 2.
+	\hfill $\Box$
 	\end{example}
 
 	
@@ -484,27 +529,10 @@ Qed.
 		\label{fig:smtex}
 	\end{figure}
 	
-	SMTCoq can be invoked within Coq 
-	using the \texttt{smt} tactic as shown 
-	in Step 1 of Fig.~\ref{fig:smtcoqex}.
-	Before involving the SMT solver, 
-	SMTCoq uses Coq tactics to extract
-	the Boolean term from a goal of this form:
-	\begin{center}
-		\texttt{forall $Q$, $B$ = true}.
-	\end{center}
-	where $Q$ is a vector of universal 
-	quantifiers, and $B$ is the Boolean
-	term that SMTCoq extracts. It performs 
-	this extraction using the \texttt{intros}
-	tactic in Coq that instantiates the 
-	universal quantifers by introducing 
-	the variables into the proof context.
-	
 	SMTCoq implements a checker for 
 	SMT solver proofs (Step 4). It 
 	encodes the language of SMT solvers
-	in Coq as two different embeddings. 
+	in Coq using two different embeddings. 
 	Given a logical framework X, and 
 	a logical framework Y, in which we 
 	want to represent the language of X, 
@@ -519,16 +547,7 @@ Qed.
 		represent terms of X. A shallow
 		embedding of SMT formulas in 
 		Coq is Coq's \texttt{bool} 
-		type of Booleans. The Boolean 
-		term $B$ from step 2 of 
-		Fig.~\ref{fig:smtcoqex}
-		is the shallow embedding of SMT 
-		formula $B$ from step 3.1 of 
-		Fig.~\ref{fig:smtex}
-		They are given the same name because 
-		they represent the same formula, but 
-		are technically different from each 
-		other.
+		type of Booleans. 
 		\item\textit{Deep Embedding: }
 		Define custom types in Y that 
 		correspond to those of X, and 
@@ -537,13 +556,29 @@ Qed.
 		respect to shallow terms. A 
 		deep embedding of SMT formulas 
 		is defined as the type 
-		\texttt{form} in SMT solvers.
+		\texttt{form} in SMT solvers, 
+		and the interpretation function 
+		$\mathbb{I}$ (referred to in 
+		Step 5) expresses the meaning 
+		of terms in the deep embedding 
+		with respect to the shallow 
+		embedding of formulas in SMTCoq.
+	\end{itemize}
+	
+	\begin{example} 
+		\em The Boolean 
+		term \texttt{B} from Step 2 of 
+		Fig.~\ref{fig:smtcoqex}
+		is the shallow embedding of SMT 
+		formula $B$ from Step 3.1 of 
+		Fig.~\ref{fig:smtex}.
 		\texttt{f} from 
 		Fig.~\ref{fig:smtcoqex} has
 		type \texttt{form}, and is 
-		the deep embedding of $B$.
-	\end{itemize}
-	
+		the deep embedding of 
+		SMT formula $B$. \hfill $\Box$
+	\end{example}
+
 	SMT solvers refutationally prove 
 	input formulas --- given a formula
 	$F$, the solver proves that the 
@@ -568,14 +603,34 @@ Qed.
 	with the clauses (from the 
 	negation of the input formula) at
 	the leaves and $\bot$
-	at the root. The role of the SMT
+	at the root. While the actual SMT 
+	solver proof typically also consists 
+	of proof steps justifying CNF 
+	conversion steps, we omit the 
+	CNF conversion phase from our proofs.
+	The role of the SMT
 	solver from Fig.~\ref{fig:smtcoqex}
 	is elaborated in Fig.~\ref{fig:smtex}.
 	The SMT solver's proof creation is 
 	detailed in Report 3.
 	
+	\begin{example} 
+		\em In Fig.~\ref{fig:smtex}, 
+		SMT formula $B$ (corresponding
+		to Boolean term \texttt{B}
+		from Fig.~\ref{fig:smtcoqex}) is 
+		negated in Step 3.1, and converted 
+		to CNF normal form in Step 3.2.
+		Finally, in Step 3.3, the 
+		unsatisfiability of $\neg B$ is 
+		proven by a refutation tree with 
+		the clauses from the CNF in Step 3.2
+		at the leaves, and $\bot$ at the 
+		root. \hfill $\Box$
+	\end{example}
+
 	Given a deep embedding of 
-	Boolean term $B$, and a proof of 
+	formula $B$, and a proof of 
 	unsatisfiability of $\neg B$
 	from the SMT solver, SMTCoq's proof 
 	checker checks that the proof proves
@@ -611,8 +666,8 @@ Qed.
 	\mathbb{I}_{\nu}(\texttt{f})$
 	is exactly the proof required 
 	to close theorem $\texttt{F}$
-	in Coq. The reflection principle 
-	is explained in Section~\ref{sec:refl}.	
+	in Coq. Steps 4 to 6 are covered
+	in detail in the rest of the report.
 	
 	\paragraph{Guarantees}
 	SMTCoq is \textit{sound} ---
@@ -620,7 +675,7 @@ Qed.
 	formula is valid and thus the proof
 	can be closed (using \texttt{Qed.},
 	as in Fig.~\ref{fig:smtcoqex}, 
-	step 5), but 
+	Step 6), but 
 	not \textit{complete} --- when it 
 	fails to prove a formula, we can't 
 	be certain that the formula isn't 
@@ -659,20 +714,20 @@ Qed.
 	
 	\medskip
 	
-	\texttt{form} is the type of 
+	\noindent \texttt{form} is the type of 
 	SMT formulas:
 	\begin{minted}{coq}
-	Inductive form : Type :=
-	| Fatom (_ : atom)
-	| Ftrue
-	| Ffalse
-	| Fnot (_ : form)
-	| Fand (_ : array form)
-	| For (_ : array form)
-	| Fimp (_ : array form)
-	| Fxor (_ _ : form)
-	| Fiff (_ _ : form)
-	| Fite (_ _ _ : form)
+Inductive form : Type :=
+  | Fatom (_ : atom)
+  | Ftrue
+  | Ffalse
+  | Fnot (_ : form)
+  | Fand (_ : array form)
+  | For (_ : array form)
+  | Fimp (_ : array form)
+  | Fxor (_ _ : form)
+  | Fiff (_ _ : form)
+  | Fite (_ _ _ : form)
 	\end{minted}
 	where a formula can be an atom, 
 	\texttt{true}, \texttt{false};
@@ -684,12 +739,13 @@ Qed.
 	or, an if-then-else of three formulas.
 	
 	\medskip
-	\texttt{atom} is the type of SMT atoms
+	
+	\noindent \texttt{atom} is the type of SMT atoms
 	(or terms):
 	\begin{minted}{Coq}
-	Inductive atom : Type :=
-	| AppIntr (_ : op) (_: list atom)
-	| AppUnintr (_ : int) (_: list atom).	
+Inductive atom : Type :=
+  | AppIntr (_ : op) (_: list atom)
+  | AppUnintr (_ : int) (_: list atom).	
 	\end{minted} 
 	which can be applications of 
 	either interpreted functions 
@@ -700,56 +756,86 @@ Qed.
 	integers while interpreted ones 
 	are encoded as follows:
 	\begin{minted}{Coq}
-	Inductive op : Type :=
-	| Zcst (_ : Z) | Zle | Zlt | Zplus | ...
-	| Eq (_ : type).
+Inductive op : Type :=
+  | Zcst (_ : Z) | Zle | Zlt | Zplus | ...
+  | Eq (_ : type).
 	\end{minted}
 	Some of the interpreted integer 
 	functions are shown in \texttt{op}.
 	Similarly, there are interpreted 
 	functions from each theory.
-	Some examples of atoms are 
-	\begin{itemize}
-		\item \texttt{AppUnintr	1 []} for $x$,
+	
+	\begin{example}
+		\label{ex:deepatoms}
+		\em Some examples of atoms are:
+		\begin{itemize}
+			\item \texttt{AppUnintr	1 []} for $x$,
 			where $x$ has index $1$.
-		\item \texttt{AppUnintr 2 []} for $y$,
+			\item \texttt{AppUnintr 2 []} for $y$,
 			with index $2$ for $y$.
-		\item \texttt{AppUnintr 0 [AppUnintr 
-			1 []]} for the term $f(x)$ where 
+			\item \texttt{AppUnintr 0 [AppUnintr 
+				1 []]} for the term $f(x)$ where 
 			$f$ has index $0$.
-		\item \texttt{AppIntr Zplus [(AppIntr 
-			(Zcst 5) []); (AppUnintr 2 [])]} 
-		for the term $5 + y$.
-	\end{itemize}
-	Finally, for convenience of representing 
+			\item \texttt{AppIntr Zplus [(AppIntr 
+				(Zcst 5) []); (AppUnintr 2 [])]} 
+			for the term $5 + y$.
+		\end{itemize} \hfill $\Box$
+	\end{example}
+	
+	For convenience of representing 
 	CNF formulas in SMTCoq, a \texttt{clause} 
 	data structure encodes a disjunction of 
-	literals as a list of its constituents 
+	literals as a list of its disjuncts
 	and a \texttt{state} represents the entire 
 	formula in CNF as an array of the 
-	respective conjuncts. Thus, the deep 
-	embedding of formula $B$ from our running 
-	example, is the encoding of the set 
-	$\{\neg b \lor c, \neg a \lor b, a, 
-	\neg c\}$ from step 3.2 of 
-	Fig.~\ref{fig:smtex} 
-	as the following \texttt{state}:
-	\begin{align*}
-	\{&\texttt{[Fnot Fatom (AppUnintr 1 []); 
-		Fatom (AppUnintr 2 [])],} &(*\ \neg b \lor c\ *)\\
-	&\texttt{[Fnot Fatom (AppUnintr 0 []);
-		Fatom (AppUnintr 1 [])],} &(*\ \neg a \lor b\ *)\\
-	&\texttt{[Fatom (AppUnintr 0 [])],
-		[Fnot Fatom (AppUnintr 2 [])]}\} &(*\ a, \neg c\ *)  
-	\end{align*}
-	where $a, b,$ and $c$ are indexed as 
-	$0, 1,$ and $2$.
+	respective conjuncts. We can now 
+	specify the deep embedding of the 
+	formula from our running example in 
+	Fig.~\ref{fig:smtcoqex}.
 	
+	\begin{example}
+		\em The deep embedding of 
+		\begin{center}
+			$B: (b \land \neg c) \lor 
+			(a \land \neg b) \lor \neg a 
+			\lor c$
+		\end{center}
+		from our running example is \texttt{f}:
+		\begin{align*}
+			\texttt{For \{}
+				&\texttt{(Fand \{\bvar,\ \fnot{\cvar}\}), }\\
+				&\texttt{(Fand \{\avar,\ \fnot{\bvar}\}), }\\
+				&\texttt{\fnot \avar, \cvar\}}
+		\end{align*}
+		and the deep embedding of $\neg B$ 
+		(in CNF), \texttt{$\neg$f} is the 
+		encoding of the set 
+		$\{\neg b \lor c, \neg a \lor b, a, 
+		\neg c\}$ from Step 3.2 of 
+		Fig.~\ref{fig:smtex} 
+		as the following \texttt{state}:
+		\begin{align*}
+			\{&\texttt{[Fnot Fatom 
+			(AppUnintr 1 []); 
+			Fatom (AppUnintr 2 [])],} 
+			&(*\ \neg b \lor c\ *)\\
+			&\texttt{[Fnot Fatom 
+			(AppUnintr 0 []); Fatom 
+			(AppUnintr 1 [])],} &(*\ 
+			\neg a \lor b\ *)\\
+			&\texttt{[Fatom (AppUnintr 0 
+			[])], [Fnot Fatom (AppUnintr 
+			2 [])]}\} &(*\ a, \neg c\ *)  
+		\end{align*}
+		where $a, b,$ and $c$ are indexed 
+		as $0, 1,$ and $2$. \hfill $\Box$
+	\end{example}
+
 	Given deep embedding 
 	\texttt{f} of type \texttt{form}
 	and proof object \texttt{t} of type 
 	\texttt{T}, the checker returns 
-	\texttt{true} if its able to 
+	\texttt{true} if it is able to 
 	check that \texttt{t} is a proof
 	of unsatisfiability of \texttt{$\neg$f},
 	and \texttt{false} otherwise.
@@ -757,10 +843,19 @@ Qed.
 		\texttt{checker : form 
 			$\to$ T $\to$ bool}	
 	\end{center}
-	Although all SMT solvers (that 
+	It is sound --- when 
+	it returns \texttt{true}, the
+	input formula is unsatisfiable, 
+	but not complete --- when it 
+	returns \texttt{false} the 
+	input formula is not necessarily 
+	satisfiable. 
+	
+	\paragraph{Proof Certificates} Although all 
+	SMT solvers (that 
 	interface with SMTCoq) provide a
-	refutation tree as a proof, as 
-	illustrated in step 3.3 of 
+	refutation tree as a proof as 
+	illustrated in Step 3.3 of 
 	Fig.~\ref{fig:smtex},
 	their proof formats vary. CVC4 uses 
 	LFSC~\cite{DBLP:journals/fmsd/StumpORHT13}
@@ -779,7 +874,7 @@ Qed.
 	that these translators are outside 
 	Coq's trusted kernel, but are kept
 	small, and tested using a large 
-	set of benchmarks. However, they
+	set of benchmarks. Moreover, they
 	don't reduce SMTCoq's soundness
 	guarantees since a mistranslated
 	proof will not check.
@@ -794,7 +889,7 @@ Qed.
 		\end{center}
 	\end{figure}
 	
-	\subsection{Checking Process}
+	\paragraph{Checker Architecture}
 	To prove the unsatisfiability of a 
 	formula, the SMT solver operates in 
 	phases. It converts the formula into
@@ -848,7 +943,7 @@ Qed.
 	deep embedding of SMT formulas 
 	in Coq and a checker for 
 	refutation proofs of their 
-	negations (step 3 of 
+	negations (Step 4 of 
 	the running example in 
 	Fig.~\ref{fig:smtcoqex}). 
 	This infrastructure alone serves 
@@ -856,7 +951,7 @@ Qed.
 	SMT solver proofs in Coq.
 	SMTCoq, however, is able to 
 	do more than this, as demonstrated
-	in steps 5 and 6. In addition 
+	in Step 5 and Step 6. In addition 
 	to checking SMT solver proofs, 
 	it can lift these up to 
 	Boolean formulas in Coq and
@@ -865,13 +960,13 @@ Qed.
 	the SMT solver. In principle,
 	this is done by proving the
 	correctness of \texttt{checker}
-	with respect to \texttt{Bool}
+	with respect to \texttt{bool}
 	formulas, that is to say that 
 	for every formula (\texttt{form})
 	that \texttt{checker} is able to 
 	successfully check against its
 	proof from the SMT solver, the 
-	corresponding \texttt{Bool}
+	corresponding \texttt{bool}
 	formula holds. The entities
 	that these deep embeddings 
 	must correspond to are the shallow
@@ -880,183 +975,289 @@ Qed.
 	interpretation function. The 
 	shallow embedding, interpretation
 	function, and the correctness 
-	lemma are discussed in this 
-	section.
+	lemma are discussed in what
+	follows.
 	
 	\begin{enumerate}
-	\item The \emph{shallow embedding} of SMT formulas
-	have Coq's \texttt{Bool} type of 
-	Booleans. The advantage of a 
-	shallow embedding in a logical 
-	framework is that it is usually 
-	a subset of the framework's language
-	and doesn't need to be defined. 
-	As in the deep embedding, Boolean
-	formulas may have atoms containing 
-	terms from the theories of 
-	equality, integers, bit-vectors,
-	and arrays. Boolean equality and
-	the Coq $\mathbb{Z}$~\cite{CoqZ} type 
-	of integers are sufficient to encode
-	the first two, while SMTCoq 
-	defines custom types for 
-	bit-vectors and arrays. The
-	respective shallow embeddings of
-	the examples used to illustrate 
-	the deep embedding of atoms in the 
-	previous section are simply 
-	\texttt{f(x)} and \texttt{5 + y} 
-	with \texttt{f, x,} and \texttt{y}
-	correctly typed. The shallow 
-	embedding for our running example 
-	is the Boolean term $B$
-	from Step 2 of fig.~\ref{fig:smtcoqex}):
-	\begin{center}
-		\texttt{(b \&\& negb c) || (a 
-			\&\& negb b) || negb a || c}
-	\end{center}
-	The interpretation function 
-	has the following type.
-	\begin{center}
-		$\mathbb{I} :\ \texttt{form} \to 
-		\texttt{val} \to \texttt{bool}$
-	\end{center}
-	Given a \texttt{form} \texttt{f} 
-	and a valuation $\nu$ of free 
-	variables in \texttt{f} 
-	the interpretation function returns 
-	the shallow embedding of \texttt{f}
-	with the variables in \texttt{f} 
-	assigned values as specified by 
-	$\nu$. The interpretation of a 
-	formula \texttt{f} for a valuation 
-	$\nu$ is represented as $\mathbb{I}_{\nu}
-	(\texttt{f})$. 
+		\item The \emph{shallow 
+		embedding} of SMT formulas
+		is Coq's \texttt{bool} 
+		type of Booleans. The 
+		advantage of a shallow 
+		embedding in a logical 
+		framework is that  the 
+		semantics of formulas in 
+		the embedding are 
+		available to be used 
+		out of the box, while 
+		this was done, for 
+		instance, using the 
+		interpretation function
+		$\mathbb{I}$ for deep 
+		embedding \texttt{form}.
+		As in the deep embedding, 
+		Boolean	formulas may have 
+		atoms containing terms from 
+		the theories of equality, 
+		integers, bit-vectors,
+		and arrays. Boolean equality 
+		and	the Coq 
+		$\mathbb{Z}$~\cite{CoqZ} type 
+		of integers are sufficient 
+		to encode the first two, 
+		while SMTCoq defines custom 
+		types for bit-vectors and 
+		arrays (and as a consequence,
+		also the semantics of these
+		types). The respective 
+		shallow embeddings of
+		the deeply embedded terms from 
+		Ex.~\ref{ex:deepatoms} are simply
+		\texttt{x}, \texttt{y}, \texttt{f(x)} 
+		and \texttt{5 + y} 
+		with \texttt{f, x,} and \texttt{y}
+		correctly typed. 
 	
-	\item Finally, the 
-	\emph{reflection principle}, 
-	or the reflection lemma, is a 
-	lemma proving the checker correct
-	in terms of the shallow embedding.
-	\begin{align*}
-	\texttt{checker\_correct} :\ 
-	\forall\ \texttt{(f : form)
-		(t : T) checker f t = true} \to \\
-	\forall\ (\nu : \texttt{val}),\ 
-	\mathbb{I}_{\nu}(\texttt{f}) = 
-	\texttt{true}
-	\end{align*}
-	If a checker is able to check 
-	some formula \texttt{f} in 
-	the deep embedding against
-	some proof certificate \texttt{t} from 
-	the SMT solver (it checks that 
-	\texttt{t} proves the unsatisfiability
-	of \texttt{$\neg$f}), then 
-	\texttt{checker\_correct},
-	proves that the shallow embedding,
-	or the interpretation of \texttt{f}
-	holds for any valuation of the 
-	variables in \texttt{f} (thus 
-	proving it valid). 
+		\item The \emph{interpretation 
+		function} has the following type.
+		\begin{center}
+			$\mathbb{I} :\ \texttt{form} \to 
+			\texttt{val} \to \texttt{bool}$
+		\end{center}
+		The interpretation function maps 
+		\texttt{form} \texttt{f} to 
+		its shallow embedding, given 
+		a valuation $\nu$ of free 
+		variables in \texttt{f}. 
+		$\nu$ specifies the assignment 
+		of values to the free variables in 
+		\texttt{f}. We use shorthand 
+		$\mathbb{I}_{\nu}
+		(\texttt{f})$ for $\mathbb{I}\ 
+		\texttt{f}\ \nu$. The interpretation
+		function is recursively defined
+		and while it is not fully 
+		specified here, we 
+		illustrate it using an 
+		example below.
 	
-	It is called the reflection 
-	principle, because it uses 
-	computational reflection 
-	to shift the burden of the 
-	proof to a computation --- 
-	the computation done by 
-	the checker. Since 
-	\texttt{checker\_correct}
-	is proved for all formulas 
-	and certificates, it can be 
-	instantiated with any 
-	particular formula and 
-	certificate. The only thing it 
-	requires, to 
-	prove the interpretation of 
-	the formula, is that the checker
-	returns \texttt{true}.
-	Since SMT solver proofs are 
-	often large, this is a 
-	heavy computation. The
-	reflection mechanism reduces
-	proving to computations via 
-	Coq's reduction mechanism.
-	Coq's Calculus of Inductive 
-	Constructions (CIC) is a 
-	$\lambda-$calculus that has a 
-	reduction mechanism for terms. The
-	reduction rules form a strongly 
-	normalizing system. The calculus's
-	\textit{conversion rule} allows a 
-	term to have multiple types, as long as 
-	the types have the same normal forms. 
-	For instance, for some predicate $P$ 
-	over natural numbers, a term that 
-	has type $P(10)$ also has type 
-	$P(5*2)$ and $P(20-10)$. Due 
-	to the conversion rule, 
-	computations can be used in Coq's 
-	reasoning and proof terms can be 
-	found simply by computing normal 
-	forms of types.
+		\item The \emph{reflection 
+		principle}, or the 
+		reflection lemma, is a 
+		theorem in Coq, proving the 
+		checker correct in terms of 
+		the shallow embedding.
+		\begin{align*}
+			\texttt{checker\_correct} :\ 
+			\forall\ \texttt{(f : form)
+			(t : T) checker f t = true} 
+			\to \\
+			\forall\ (\nu : \texttt{val}),\ 
+			\mathbb{I}_{\nu}(\texttt{f}) = 
+			\texttt{true}
+		\end{align*}
+		If a checker is able to check 
+		some formula \texttt{f} in 
+		the deep embedding against
+		some proof certificate 
+		\texttt{t} from 
+		the SMT solver (it checks that 
+		\texttt{t} proves the 
+		unsatisfiability
+		of \texttt{$\neg$f}), then 
+		\texttt{checker\_correct},
+		proves that the 
+		interpretation of \texttt{f}
+		(in the shallow embedding)
+		holds, for any valuation of 
+		the variables in \texttt{f} 
+		(thus proving \texttt{f} valid). 
+	
+		It is called the reflection 
+		principle, because it uses 
+		computational reflection 
+		to shift the burden of the 
+		proof to a computation --- 
+		the computation done by 
+		the checker. Since 
+		\texttt{checker\_correct}
+		is proved for all formulas 
+		and certificates, it can be 
+		instantiated with any 
+		particular formula and 
+		certificate. The only thing it 
+		requires, to 
+		prove the interpretation of 
+		the formula, is that the 
+		checker
+		returns \texttt{true}.
+		Since SMT solver proofs are 
+		often large, this is a 
+		heavy computation. The
+		reflection mechanism reduces
+		proving to computations via 
+		Coq's reduction mechanism.
+		Coq's Calculus of Inductive 
+		Constructions (CIC) is a 
+		$\lambda-$calculus that has a 
+		reduction mechanism for terms. The
+		reduction rules form a strongly 
+		normalizing system. The calculus's
+		\textit{conversion rule} allows a 
+		term to have multiple types, as long as 
+		the types have the same normal forms. 
+		For instance, for some predicate $P$ 
+		over natural numbers, a term that 
+		has type $P(10)$ also has type 
+		$P(5*2)$ and $P(20-10)$. Due 
+		to the conversion rule, 
+		computations can be used in Coq's 
+		reasoning and proof terms can be 
+		found simply by computing normal 
+		forms of types.
+		
+		Given 
+		deep embedding \texttt{f}
+		of a formula, and 
+		SMT proof certificate \texttt{t} of 
+		\texttt{f}, the proof of $\forall\ \nu,\ 
+		\mathbb{I}_{\nu}(\texttt{f}) = 
+		\texttt{true}$ is simply:
+		\begin{center}
+			$\texttt{checker\_correct f t
+				(refl\_equal (checker f t) true)}$
+		\end{center}
+		where \texttt{refl\_equal} 
+		(reflexivity of equality) is a tactic
+		that forces the Coq type-checker to 
+		perform an equality check between 
+		\texttt{checker f t} and 
+		\texttt{true} by reduction. 
+		The claim is that the two 
+		terms are convertible to each other
+		and since \texttt{true} is a simple 
+		term of type \texttt{bool}, 
+		Coq's reduction mechanism is 
+		invoked on \texttt{checker f t},
+		which usually consists of checking
+		a large non-trivial proof certificate. 
+		SMTCoq uses various optimizations 
+		to make these computations efficient.
+		As mentioned in the previous section,
+		the deep embedding presented there 
+		only conceptually resembles SMTCoq's
+		deep embedding. The implementation 
+		of SMTCoq uses a non-recursive 
+		structure with hash-consing of terms
+		and machine integers to store variables,
+		among other optimization tricks.
+		Similar optimizations are also 
+		applied to certificates.
+		Since the reflection principle is 
+		proved for general formulas, 
+		each invocation of it only varies
+		in the deep embedding and proof 
+		certificate that it is instantiated
+		with. This is a simple instantiation
+		proof in Coq, the overhead
+		being in reducing the call to 
+		\texttt{checker} for each 
+		formula and proof pairing to 
+		\texttt{true}.
 \end{enumerate}
 	
 	\begin{example}
-	\em Returning to our running example, 
-	step 5 of 
-	Fig.~\ref{fig:smtcoqex} illustrates
-	a call to the reflection principle by
-	SMTCoq. Given 
-	deep embedding \texttt{f}
-	of the formula in the example, and 
-	SMT proof certificate \texttt{t} of 
-	\texttt{f}, the proof of $\forall\ \nu,\ 
-	\mathbb{I}_{\nu}(\texttt{f}) = 
-	\texttt{true}$ is simply:
-	\begin{center}
-		$\texttt{checker\_correct f t
-			(refl\_equal (checker f t) true)}$
-	\end{center}
-	where \texttt{refl\_equal} 
-	(reflexivity of equality) is a tactic
-	that forces the Coq type-checker to 
-	perform an equality check between 
-	\texttt{checker f t} and 
-	\texttt{true} by reduction. 
-	The claim is that the two 
-	terms are convertible to each other
-	and since \texttt{true} is a simple 
-	term of type \texttt{Bool}, 
-	Coq's reduction mechanism is 
-	invoked on \texttt{checker f t},
-	which usually consists of checking
-	a large non-trivial proof certificate. 
-	SMTCoq uses various optimizations 
-	to make these computations efficient.
-	As alluded to in the previous section,
-	the deep embedding presented there 
-	only conceptually resembles SMTCoq's
-	deep embedding. The implementation 
-	of SMTCoq uses a non-recursive 
-	structure with hash-consing of terms
-	and machine integers to store variables,
-	among other optimization tricks.
-	Similar optimizations are also 
-	applied to certificates.
-	Since the reflection principle is 
-	proved for general formulas, 
-	each invocation of it only varies
-	in the deep embedding and proof 
-	certificate that it is instantiated
-	with. This is a simple instantiation
-	proof in Coq, the overhead
-	being in reducing the call to 
-	\texttt{checker} for each 
-	formula and proof pairing to 
-	\texttt{true}.
-	\hfill $\Box$
+		\em Recall that the deep embedding
+		\texttt{f} of $B$ from 
+		Fig.~\ref{fig:smtex} is:
+		\begin{align*}
+			\texttt{For \{}
+			&\texttt{(Fand \{\bvar,\ 
+				\fnot{\cvar}\}), }\\
+			&\texttt{(Fand \{\avar,\ 
+				\fnot{\bvar}\}), }\\
+			&\texttt{\fnot \avar, 
+				\cvar\}}  
+		\end{align*}
+
+		$\mathbb{I}_{\nu}$(\texttt{f}) 
+		is recursively defined
+		by first defining the interpretation
+		of all the atoms in \texttt{f}.
+		\begin{align*}
+			&\bullet\quad \intr{\texttt{\avar}} 
+			&= \texttt{$\nu$(a)}\\
+			&\bullet\quad \intr{\texttt{\bvar}} 
+			&= \texttt{$\nu$(b)}\\
+			&\bullet\quad \intr{\texttt{\cvar}} 
+			&= \texttt{$\nu$(c)}\\
+			&\bullet\quad \intr{\texttt{\fnot{\bvar}}} &= \ 
+			\texttt{negb (}\intr{\texttt{\bvar}}\texttt{)}\\
+			& &= \texttt{negb(}\nu
+			\texttt{(b))}\\
+			&\bullet\quad \intr{\texttt{\fnot{\cvar}}} &= \ 
+			\texttt{negb (}\intr{\texttt{\cvar}}\texttt{)}\\
+			& &= \texttt{negb(}\nu
+			\texttt{(c))}\\
+		\end{align*}
+		We then need the interpretation of 
+		conjunctions and disjunctions:
+		\begin{itemize}
+			\item$\mathbb{I}_{\nu}$
+			\texttt{(Fand \{F$_1,\ ...,\ $F$_n$\})} = 
+			$\mathbb{I}_{\nu}$(\texttt{F$_1$})
+			\texttt{ \&\& ... \&\& }
+			$\mathbb{I}_{\nu}$(\texttt{F$_2$})
+			\item$\mathbb{I}_{\nu}$
+			\texttt{(For \{F$_1,\ ...,\ $F$_n$\})} = 
+			$\mathbb{I}_{\nu}$(\texttt{F$_1$})
+			\texttt{ || ... || }
+			$\mathbb{I}_{\nu}$(\texttt{F$_2$})
+		\end{itemize}
+		Finally, we can define the interpretation 
+		of the entire deep embedding of \texttt{f}:
+		\begin{align*}
+			\intr{\texttt{f}}\ &=\ 
+			\texttt{($\nu$(b) \&\& negb $\nu$(c)) ||
+					($\nu$(a) \&\& negb $\nu$(b)) ||
+					negb $\nu$(a) ||
+					$\nu$(c)}
+		\end{align*}
+		Assuming an arbitrary valuation 
+		$\nu$ gives us exactly the shallow 
+		embedding of $B$, or the Boolean
+		term \texttt{B}:
+		\begin{center}
+			\texttt{(b \&\& negb c) || (a 
+				\&\& negb b) || negb a || c}
+		\end{center}
+		for arbitrary \texttt{a}, \texttt{b},
+		and \texttt{c}, which is what we 
+		get from 
+		$\forall\ \nu,\ \intr{\texttt{f}}$.
+		
+		In Step 4, a call to the checker 
+		checks that certificate \texttt{t} 
+		proves the unsatisfiability of $\neg$
+		\texttt{f}. This call is made
+		when the reflection principle 
+		is instantiated with \texttt{f} and 
+		\texttt{t} in Step 5, and the 
+		\texttt{refl\_equal} tactic forces 
+		Coq to convert 
+		\texttt{checker f t = true} to 
+		\texttt{true}. If the call to the 
+		checker is convertible, that is,
+		the checker is successful, then 
+		the reflection principle produces 
+		the proof of 
+		$\forall\ \nu,\ \intr{\texttt{f}}$
+		which is the necessary proof term 
+		required to complete the proof 
+		(Step 6). For 
+		this example, the call to the 
+		checker is indeed successful.
+		\hfill $\Box$
 	\end{example}
 
 	\paragraph{Small Checkers}
@@ -1085,7 +1286,9 @@ Qed.
 	\texttt{checker} (although
 	it is not straightforward 
 	to prove the small checkers 
-	correct). The division 
+	correct). 
+	
+	\paragraph{Modularity} The division 
 	of a proof into steps and 
 	the division of the main 
 	checker into checkers for these
@@ -1095,7 +1298,7 @@ Qed.
 	add new steps (like new theories)
 	to SMTCoq without breaking 
 	the rest of the system --- one 
-	needs to extend the step type,
+	need only extend the step type,
 	write a checker for the step, 
 	and prove it correct. The 
 	certificate format for SMT
