@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[11pt]{article}
 \usepackage{proof}
 \usepackage{bussproofs}
 \usepackage{xcolor}
@@ -11,6 +11,7 @@
 \usepackage{verbatim}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{fullpage}
 \newtheorem{example}{Example}[section]
 \hypersetup{
 	pdfborder={0 0 0},
@@ -143,8 +144,8 @@
 	
 	\subsection{Many-Sorted First-Order Logic}
 	\label{sec:msfol}
-	Many-sorted first-order logic extends
-	first-order logic (FOL) with 
+	Many-sorted first-order logic (MSFOL)
+	extends first-order logic with 
 	types (or sorts). We present the 
 	syntax in this section and the 
 	semantics are presented in
@@ -186,9 +187,12 @@
 	can be specified using the connectives 
 	and quantifiers mentioned above.
 	
-	A \textit{literal} is a term, or a 
-	formula with no connectives other than 
-	$\neg$. A \textit{clause} is a 
+	An \textit{atomic formula} is one 
+	of $\bot$, $t_1 = t_2$, 
+	$P^{\sigma_1,...,\sigma_m}$ and a 
+	\textit{literal} is an atomic 
+	formula or it's negation. 
+	A \textit{clause} is a 
 	disjunction of literals. All formulas 
 	can be converted to conjunction normal 
 	form (CNF) which is a conjunction of 
@@ -203,7 +207,8 @@
 	or the empty conjunction which is 
 	trivially satisfiable).
 	
-	\noindent The resolution rule simplifies two 
+	\noindent The resolution rule,
+	simplifies two 
 	clauses to a new clause as follows:
 	\begin{center}
 		$\infer[resolution]{\phi_1 \lor ... \lor 
@@ -328,7 +333,6 @@
 	shared with the SAT	solver integration.
 	
 	\begin{figure}
-		\vspace{-1.3in}
 		\begin{framed}
 			\textsc{Step 1}: Coq tactic invokes SMTCoq
 			to prove theorem:
@@ -339,11 +343,11 @@ Proof.
   smt.
 			\end{minted}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
 			$\downarrow$
 		\end{center}
-	
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 2}: SMTCoq extracts Boolean 
 			term \texttt{B} from \texttt{F} and creates a deep 
@@ -353,11 +357,11 @@ Proof.
 				(a \&\& negb b) || negb a || c}
 			\end{center}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
 			$\downarrow$
 		\end{center}
-	
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 3}: SMT solver 
 			proves unsatisfiability of $\neg B$ 
@@ -365,11 +369,11 @@ Proof.
 			and returns proof \texttt{t}. This step 
 			is expanded in Fig.~\ref{fig:smtex}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
 			$\downarrow$
 		\end{center}
-		
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 4}: Call to SMTCoq's 
 			checker checks that \texttt{t}
@@ -379,11 +383,11 @@ Proof.
 				$c\ :=\ $\texttt{checker f t = true}
 			\end{center}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
 			$\downarrow$
 		\end{center}
-		
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 5}: Reflection principle 
 			reflects deep embedding to shallow 
@@ -395,11 +399,11 @@ Proof.
 					(refl\_equal $c$ true)}
 			\end{center}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
 			$\downarrow$
 		\end{center}
-		
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 6}: Proof of \texttt{F} is 
 			completed in Coq:
@@ -489,11 +493,11 @@ Qed.
 			a \lor c)
 			\end{align*}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
 		\end{center}
-		
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 3.2}: $\neg B$ after CNF 
 			conversion is checked for 
@@ -503,11 +507,11 @@ Qed.
 			a, \neg c\}
 			\end{align*}
 		\end{framed}
-		
+		\vspace{-0.3in}
 		\begin{center}
-			$\big\downarrow$
+			$\downarrow$
 		\end{center}
-		
+		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 3.3}: SMT solver produces 
 			proof \texttt{t} of 
