@@ -367,7 +367,7 @@ Proof.
 			proves unsatisfiability of $\neg B$ 
 			(the SMT encoding of $\neg$\texttt{B}) 
 			and returns proof \texttt{t}. This step 
-			is expanded in Fig.~\ref{fig:smtex}
+			is expanded in Figure~\ref{fig:smtex}
 		\end{framed}
 		\vspace{-0.3in}
 		\begin{center}
@@ -392,7 +392,7 @@ Proof.
 			\textsc{Step 5}: Reflection principle 
 			reflects deep embedding to shallow 
 			embedding $\mathbb{I}(\texttt{f})$
-			via call to \texttt{checker} form 
+			via call to \texttt{checker} from 
 			Step 4:
 			\begin{center}
 				\texttt{checker\_correct f t 
@@ -436,7 +436,7 @@ Qed.
 	reflection. 
 	
 	This is illustrated in 
-	Fig.~\ref{fig:smtcoqex} using a 
+	Figure~\ref{fig:smtcoqex} using a 
 	running example that is elaborated 
 	in the rest of the section. The running
 	example is of a propositional formula
@@ -471,7 +471,7 @@ Qed.
 	the variables into the proof context.
 	
 	\begin{example} 
-	\em In Step 1 of Fig.~\ref{fig:smtcoqex},
+	\em In Step 1 of Figure~\ref{fig:smtcoqex},
 	SMTCoq is invoked via the \texttt{smt}
 	tactic on a Boolean goal (\texttt{F}) representing 
 	the formula $\forall\ a\ b\ c,\ (b \land \neg c) 
@@ -572,12 +572,12 @@ Qed.
 	\begin{example} 
 		\em The Boolean 
 		term \texttt{B} from Step 2 of 
-		Fig.~\ref{fig:smtcoqex}
+		Figure~\ref{fig:smtcoqex}
 		is the shallow embedding of SMT 
 		formula $B$ from Step 3.1 of 
-		Fig.~\ref{fig:smtex}.
+		Figure~\ref{fig:smtex}.
 		\texttt{f} from 
-		Fig.~\ref{fig:smtcoqex} has
+		Figure~\ref{fig:smtcoqex} has
 		type \texttt{form}, and is 
 		the deep embedding of 
 		SMT formula $B$. \hfill $\Box$
@@ -613,16 +613,16 @@ Qed.
 	conversion steps, we omit the 
 	CNF conversion phase from our proofs.
 	The role of the SMT
-	solver from Fig.~\ref{fig:smtcoqex}
-	is elaborated in Fig.~\ref{fig:smtex}.
+	solver from Figure~\ref{fig:smtcoqex}
+	is elaborated in Figure~\ref{fig:smtex}.
 	The SMT solver's proof creation is 
 	detailed in Report 3.
 	
 	\begin{example} 
-		\em In Fig.~\ref{fig:smtex}, 
+		\em In Figure~\ref{fig:smtex}, 
 		SMT formula $B$ (corresponding
 		to Boolean term \texttt{B}
-		from Fig.~\ref{fig:smtcoqex}) is 
+		from Figure~\ref{fig:smtcoqex}) is 
 		negated in Step 3.1, and converted 
 		to CNF normal form in Step 3.2.
 		Finally, in Step 3.3, the 
@@ -655,7 +655,7 @@ Qed.
 	proof of $B$ in the shallow 
 	embedding is obtained by instantiating 
 	the correctness lemma with $B$.
-	Step 5 from Fig.~\ref{fig:smtcoqex} 
+	Step 5 from Figure~\ref{fig:smtcoqex} 
 	shows the instantiation of 
 	the reflection principle with 
 	the right objects to obtain the 
@@ -678,7 +678,7 @@ Qed.
 	when it proves a formula in Coq, the 
 	formula is valid and thus the proof
 	can be closed (using \texttt{Qed.},
-	as in Fig.~\ref{fig:smtcoqex}, 
+	as in Figure~\ref{fig:smtcoqex}, 
 	Step 6), but 
 	not \textit{complete} --- when it 
 	fails to prove a formula, we can't 
@@ -795,7 +795,7 @@ Inductive op : Type :=
 	respective conjuncts. We can now 
 	specify the deep embedding of the 
 	formula from our running example in 
-	Fig.~\ref{fig:smtcoqex}.
+	Figure~\ref{fig:smtcoqex}.
 	
 	\begin{example}
 		\em The deep embedding of 
@@ -816,7 +816,7 @@ Inductive op : Type :=
 		encoding of the set 
 		$\{\neg b \lor c, \neg a \lor b, a, 
 		\neg c\}$ from Step 3.2 of 
-		Fig.~\ref{fig:smtex} 
+		Figure~\ref{fig:smtex} 
 		as the following \texttt{state}:
 		\begin{align*}
 			\{&\texttt{[Fnot Fatom 
@@ -860,7 +860,7 @@ Inductive op : Type :=
 	interface with SMTCoq) provide a
 	refutation tree as a proof as 
 	illustrated in Step 3.3 of 
-	Fig.~\ref{fig:smtex},
+	Figure~\ref{fig:smtex},
 	their proof formats vary. CVC4 uses 
 	LFSC~\cite{DBLP:journals/fmsd/StumpORHT13}
 	which is a meta-logic that allows the 
@@ -935,7 +935,7 @@ Inductive op : Type :=
 	finally transformed to $\bot$. The 
 	architecture of the checker is 
 	illustrated in
-	Fig.~\ref{fig:checker}. The phases 
+	Figure~\ref{fig:checker}. The phases 
 	of SMT solver's operation and the 
 	corresponding steps of the
 	SMT solver's proof are elaborated
@@ -949,7 +949,7 @@ Inductive op : Type :=
 	refutation proofs of their 
 	negations (Step 4 of 
 	the running example in 
-	Fig.~\ref{fig:smtcoqex}). 
+	Figure~\ref{fig:smtcoqex}). 
 	This infrastructure alone serves 
 	as an external checker for 
 	SMT solver proofs in Coq.
@@ -1016,7 +1016,7 @@ Inductive op : Type :=
 		types). The respective 
 		shallow embeddings of
 		the deeply embedded terms from 
-		Ex.~\ref{ex:deepatoms} are simply
+		Example~\ref{ex:deepatoms} are simply
 		\texttt{x}, \texttt{y}, \texttt{f(x)} 
 		and \texttt{5 + y} 
 		with \texttt{f, x,} and \texttt{y}
@@ -1173,7 +1173,7 @@ Inductive op : Type :=
 	\begin{example}
 		\em Recall that the deep embedding
 		\texttt{f} of $B$ from 
-		Fig.~\ref{fig:smtex} is:
+		Figure~\ref{fig:smtex} is:
 		\begin{align*}
 			\texttt{For \{}
 			&\texttt{(Fand \{\bvar,\ 
@@ -1372,7 +1372,7 @@ Inductive op : Type :=
 
 	The integration of Sledgehammer 
 	with SMT solvers is illustrated in 
-	Fig.~\ref{fig:sledgehammer}. Given 
+	Figure~\ref{fig:sledgehammer}. Given 
 	a conjecture $\Phi$ in 
 	Isabelle/HOL, Sledgehammer 
 	selects a set of facts 
