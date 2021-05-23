@@ -985,27 +985,55 @@
 
 	\section{Classical vs Constructive Logic in Coq}
 	\label{sec:logic}
-	TODO explain Curry-Howard correspondence.
-	
-	Constructive or intuitionistic logic 
+	Coq is a proof assistant based on the 
+	Calculus of Inductive Constructions 
+	(CIC)~\cite{paulinmohring:hal-01094195},
+	which is as an extension of the dependent 
+	type theory --- the Calculus of Constructions 
+	(CoC)~\cite{10.1016/0890-5401(88)90005-3} 
+	--- with inductive types. Coq's type 
+	systems implements an infinite hierarchy
+	of types, where all objects, including 
+	types, are terms that have types. 
+	``Higher-order" types (types of types) are 
+	distinguished from ``first-order" types 
+	(types of terms that are not types), 
+	by referring to 
+	them as \textit{sorts}. At the bottom of the 
+	type hierarchy, Coq has (1) regular first-order
+	types such as \texttt{Bool} representing 
+	Booleans and \texttt{Nat} representing 
+	natural numbers, that are defined inductively
+	and are themselves instances of the 
+	\texttt{Set} sort, and (2) propositions or 
+	properties in Coq that have sort 
+	\texttt{Prop}. The rest of the 
+	hierarchy looks like this: 
+	\texttt{Prop} and 
+	\texttt{Set} have sort 
+	\texttt{Type$_1$} and 
+	\texttt{Type$_i$} has sort 
+	\texttt{Type$_{i+1}$}. The implementation 
+	of propositions as a sort in Coq is its
+	means of enforcing the Curry-Howard 
+	correspondence between proofs and 
+	terms (or programs), and between 
+	propositions and types. The \texttt{Prop} 
+	sort implements a constructive logic in 
+	Coq. Constructive or intuitionistic logic 
 	is a branch of mathematical logic 
 	studying arguments concerning 
 	constructive objects. A proposition 
 	is provable in constructive logic, if 
 	a (proof) term inhabiting the 
-	proposition can be constructed. 
-	Coq implements a constructive 
-	logic through its \texttt{Prop}
-	type (TODO Prop is a type of types) of propositions. 
-	TODO talk about Coq's logic.
-	
-	In other words,
-	a \texttt{Prop} $P$ can be proved in 
-	Coq only if a proof term having 
+	proposition can be constructed.
+	Thus, a \texttt{Prop} $P$ can be proved 
+	in Coq only if a proof term having 
 	type $P$ can be constructed. 	
 	This term is constructed within 
-	a \textit{proof script} in Coq. 
-	Given a lemma, Coq provides a \textit{goal} and 
+	a \textit{proof script} in the Coq
+	user-interface. Given a lemma, Coq 
+	provides a \textit{goal} and 
 	a \textit{proof context}, which 
 	contains the 
 	terms available to prove the goal.
@@ -1033,14 +1061,19 @@ Qed.
 		The formula asserts that given a 
 		proof of the proposition $a$, we
 		have a proof of the 
-		disjunction of $a$ and $b$.
+		disjunction of $a$ and $b$. The 
+		universal quantifier 
+		(\texttt{forall}) is a binder 
+		that introduces arbitrary
+		propositions \texttt{a} and 
+		\texttt{b} into the lemma.
 		The proof script between 
 		\texttt{Proof} 
 		and \texttt{Qed} constructs a 
 		proof term of type \texttt{forall 
 		(a b: Prop), a -> a $\backslash/$ b}. 
 		The first line of the 
-		script above introduces 
+		script introduces 
 		the propositions $a$ and $b$ and the 
 		proof $Ha$ of $a$ into the 
 		proof context (using the \texttt{intros}
@@ -1049,7 +1082,7 @@ Qed.
 		of the disjuncts. This is a crucial
 		detail that distinguishes constructive
 		logic from classical logic, as we 
-		will see in the next example. 
+		will see later in the section. 
 		The second line of the proof script 
 		proves the left disjunct by using 
 		the proof of $a$ from the context.
@@ -1059,7 +1092,7 @@ Qed.
 	constructive logic with the 
 	\textit{law of the excluded 
 	middle} that states that for 
-	every proposition $a$, 
+	arbitrary proposition $a$, 
 	$a \lor \neg a$ holds. This can 
 	also be stated as the 
 	double negation elimination 
@@ -1068,36 +1101,30 @@ Qed.
 	such, some statements that are true 
 	in classical logic might not have 
 	a proof in constructive logic.
+	The law of the excluded middle
+	itself is a convenient example.
+	\texttt{forall (a : Prop), a $\lor$ ~a}
+	is not provable in Coq, because,
+	as mentioned before, the only way to 
+	prove a propositional disjunction 
+	is to prove that one of the disjuncts 
+	holds and unlike \texttt{orIntroL},
+	there is no way to prove either 
+	of the disjuncts here.
 	
-	TODO remove example env
-	
-	\begin{example}
-		\em The law of the excluded middle
-		itself is a convenient example.
-	\begin{minted}{coq}
-Theorem LEMProp : forall (a : Prop), a \/ ~a.
-Proof.
-  intros a. 
-Abort.
-	\end{minted}
-		Again, the only way to prove the 
-		disjunction is to prove that one 
-		of the disjuncts holds. However, 
-		we don't have any terms in our
-		context to work 
-		with here, nor can we acquire any
-		that will let us construct the 
-		proof of either $a$ or $\neg a$,
-		so we quit out of the proof.
-		\hfill$\Box$
-	\end{example}
-	TODO change
-	
-	SMT solvers are able to prove 
-	such classical formulas and as
-	such, aren't logically compatible
-	with Coq's \texttt{Prop} type. 
-	In addition to the \texttt{Prop} 
+	An SMT solver can prove classical 
+	formulas that include both 
+	$a \Rightarrow a \lor b$ and 
+	$a \lor \neg a$ for arbitrary 
+	Booleans $a$ and $b$. As
+	such, \texttt{Prop} is not an 
+	ideal candidate to embed SMT 
+	formulas into, since with such 
+	an embedding, SMT solvers would 
+	be able to prove propositions 
+	in Coq that are incompatible with
+	Coq's constructive logic. In addition 
+	to the \texttt{Prop} 
 	type, Coq has a Boolean 
 	(\texttt{bool}) type in its standard 
 	library~\cite{CoqBool}, that defines 
@@ -1105,8 +1132,8 @@ Abort.
 	inductive type with two nullary
 	constructors \texttt{true} and
 	\texttt{false}. This Boolean type 
-	in Coq effectively implements a classical 
-	logic. Any Boolean value can 
+	in Coq effectively implements a 
+	classical logic. Any Boolean value can 
 	be inspected, pattern matched on,
 	and evaluated to either 
 	\texttt{true} or \texttt{false}.
@@ -1140,24 +1167,11 @@ Abort.
 	proposition, \textit{Boolean
 	goals}.
 	\begin{example}
-		TODO imprecise
-		
 		\em The law of 
-		excluded middle for 
-		\texttt{a : bool} is 
-		stated in Coq as: 
-		\begin{center}
-			\texttt{a || (negb a)}
-		\end{center}
-		where \texttt{orb} is the 
-		disjunction operator over 
-		Booleans and has 
-		infix notation \texttt{||},
-		and \texttt{negb} is the 
-		negation operator over 
-		Booleans.
-		This is stated as a Boolean
-		goal in Coq, and proved as follows:
+		excluded middle is 
+		stated in Coq as a Boolean
+		goal and proved
+		as follows.
 		\begin{minted}{coq}
 Theorem LEMBool : forall a : bool, a || (negb a) = true.
 Proof.
@@ -1166,6 +1180,13 @@ Proof.
   + simpl. reflexivity.
 Qed.
 		\end{minted}
+		\texttt{orb} is the 
+		disjunction operator over 
+		Booleans and has 
+		infix notation \texttt{||},
+		and \texttt{negb} is the 
+		negation operator over 
+		Booleans.
 		\texttt{destruct a} performs a 
 		case analysis on $a$, and since $a$ 
 		is a Boolean that can 
@@ -1197,9 +1218,11 @@ Qed.
 		constructive logic.
 		\hfill$\Box$
 	\end{example}
-	TODO introduce SMTCOQ
-	
-	Since SMT solvers implement 
+
+	\subsection{The Role of SMTCoq}
+	SMTCoq is a plugin that adds automation
+	to Coq by dispatching goals to SMT
+	solvers. Since SMT solvers implement 
 	a classical logic, SMTCoq 
 	uses SMT solver proofs to 
 	prove classical formulas 
@@ -1220,30 +1243,53 @@ Qed.
 		\end{minted}
 		\hfill$\Box$
 	\end{example}
-	As described in Report 2, 
-	SMTCoq defines a \texttt{form} type
-	as a deep embedding of 
-	SMT formulas, 
-	and \textit{reflects} 
-	proofs of \texttt{form}s from the SMT 
-	solver to proofs of \texttt{Bool} 
-	terms, 
-	TODO 
-	the shallow embedding of formulas 
-	in Coq. SMTCoq contains a checker in Coq 
-	that checks 
-	proofs from the SMT solver against
-	the deep embedding of formulas
-	(it checks that the SMT solver proves 
-	the unsatisfiability of the negation
-	of the deep embedding of the formula), and 
-	TODO elaborate
-	
-	the reflection principle is a proof
-	of correctness of the checker, that 
-	is used by SMTCoq to prove classical
-	goals in Coq represented using the
-	\texttt{Bool} type.
+	SMTCoq embeds SMT formulas in 
+	Coq as Boolean goals in what is 
+	called a \textit{shallow embedding}, 
+	which uses 
+	types in Coq that correspond to SMT
+	formulas, to embed SMT formulas
+	in Coq. As such, SMT formula semantics 
+	are already defined in Coq. A proof of a
+	formula from an SMT solver is 
+	translated to the proof of a Boolean
+	goal in Coq via a \textit{deep embedding}.
+	SMTCoq defines 
+	\begin{itemize}
+		\item the deep embedding of
+			SMT formulas in Coq as the 
+			\texttt{form} type, 
+		\item an interpretation of 
+			\texttt{form}s with respect to 
+			\texttt{Bool}s,
+		\item a checker for proofs of 
+			(unsatisfiability of the 
+			negation) the deep embedding 
+			of formulas coming from the SMT 
+			solver, and,
+		\item a proof of correctness of 
+			the checker, also called 
+			the \textit{reflection lemma},
+			that \textit{reflects} a proof
+			of the deep embedding of a 
+			formula from the SMT solver
+			(successfully checked by the 
+			checker) to the proof of a 
+			Boolean goal in Coq (the 
+			shallow embedding of 
+			formulas).
+	\end{itemize}
+	This process is described in further
+	detail in Report 2. 
+	Figure~\ref{fig:prop2bool} and
+	Figure~\ref{fig:smtcoqex} reproduce
+	parts of the figure from 
+	Report 2 illustrating this process, 
+	although they do it in the context 
+	of explaining SMTCoq's 
+	\texttt{Prop} to \texttt{Bool}
+	conversion, which is discussed in the
+	next subsection.
 	
 	\subsection{Theories and Prop Predicates}
 	SMTCoq integrates both 
@@ -1260,37 +1306,41 @@ Qed.
 	such as finite- and infinite-precision 
 	integers and arrays. Using its SMT 
 	solver integration, SMTCoq is able to 
-	prove expressive Boolean goals
+	prove more expressive Boolean goals
 	over the theories of uninterpreted 
 	functions, linear integer arithmetic,
 	arrays, and bit-vectors. Recall that
 	atomic formulas are applications of  
 	predicate symbols to
-	terms. In the previous section, 
+	terms. Earlier in the section, 
 	we looked at logical connectives 
 	being represented classically (as 
 	connectives over the \texttt{Bool}
 	type) or constructively (as 
-	\texttt{Prop} connectives). Similarly,
-	in this section, we will refer to
-	predicate symbols that construct 
-	\texttt{Prop}s as
-	\texttt{Prop} predicates that areand 
-	\texttt{Bool} (or Boolean) predicates 
-	in Coq. A \texttt{Prop} predicate)
-	is a proposition in Coq, parameterized
-	by terms (of any type, but we will 
+	\texttt{Prop} connectives). 
+	
+	Similarly, in this section, we will 
+	refer to predicate symbols that 
+	construct \texttt{Prop}s as
+	\texttt{Prop} predicate symbols, and 
+	those that construct \texttt{Bool}s 
+	as \texttt{Bool} (or Boolean) predicate
+	symbols, in Coq. A \texttt{Prop} predicate
+	is a proposition in Coq, 
+	parameterized
+	by values (of any type, but we will 
 	focus on the types in the theories 
 	supported by SMTCoq.). A \texttt{Bool}
 	predicate is a Boolean term,
-	parameterized by other terms. To
-	state that a \texttt{Bool} predicate 
-	holds, it's variables must be 
+	parameterized by values. To
+	state that a \texttt{Bool} term
+	holds, it's free variables must be 
 	quantified and the term equated to 
 	\texttt{true}, as demonstrated 
 	in the previous section for connectives.
 	
 	\begin{example}
+		\label{ex:boolpred}
 		\em Consider the following examples
 		of \texttt{Bool} predicates 
 		over integers and bit-vectors.
@@ -1320,24 +1370,23 @@ Qed.
 		\texttt{implb} is the implication 
 		operator over Boolean terms, 
 		\texttt{Z.eqb} is the Boolean 
-		equality predicate over integers 
-		in Coq, and \texttt{bv\_ult}
+		equality predicate symbol over 
+		integers in Coq, and 
+		\texttt{bv\_ult}
 		and \texttt{bv\_eq} are 
 		respectively the Boolean 
 		less than (over unsigned integers)
-		and equality predicate for 
+		and equality predicate symbols for 
 		bit-vectors. \hfill$\Box$
 	\end{example}
 
 	\begin{figure}[t]
 		\begin{framed}
 			\textsc{Step 1}: Coq tactic invokes SMTCoq
-			to prove theorem:
-			\begin{minted}{Coq}
-Theorem F : P.
-Proof.
-  smt.
-			\end{minted}
+			to prove theorem:\\
+			\texttt{Theorem F : $P$.}\\
+			\texttt{Proof.}\\
+  			\texttt{smt.}
 		\end{framed}
 		\vspace{-0.3in}
 		\begin{center}
@@ -1345,12 +1394,12 @@ Proof.
 		\end{center}
 		\vspace{-0.3in}
 		\begin{framed}
-			\textsc{Step 2}: Assuming that \texttt{P}
-			has predicates $P_1 \ldots P_n$, Coq
-			presents the goal:
+			\textsc{Step 2}: Assuming that $P$
+			has predicate symbols $P_1 \ldots P_n$, 
+			Coq presents the goal:
 			\begin{center}
-				$\texttt{Goal}:$ $\texttt{P}(\texttt{P}_1,\  
-				\ldots,\ \texttt{P}_n)$
+				$\texttt{Goal}:$ $P(P_1,\  
+				\ldots,\ P_n)$
 			\end{center}
 		\end{framed}
 		\vspace{-0.3in}
@@ -1365,11 +1414,16 @@ Proof.
 			predicates to their Boolean counterparts.
 			If \texttt{prop2bool}, fails, so does
 			\texttt{smt}. If it succeeds, the goal 
-			is now:
+			is now (assuming symbol $P_i$ corresponds
+			to Boolean $B_i$):
 			\begin{center}
-				$\texttt{Goal}:$ $\texttt{B}_1,\ \ldots,\  \texttt{B}_n 
+				$\texttt{Goal}: P(B_1,\ \ldots,\ B_n)
 				= \texttt{true}$
 			\end{center}
+			Quantifiers are also faithfully converted ---
+			the Boolean variables in the converted 
+			goal are bound as the propositional 
+			variables were in the original goal.
 		\end{framed}
 		\vspace{-0.3in}
 		\begin{center}
@@ -1456,27 +1510,34 @@ Qed.
 		\label{fig:smtcoqex}
 	\end{figure}
 
-	For some predicates, SMTCoq is 
-	able to prove instances of their 
-	\texttt{Prop} version, in addition 
-	to instances of \texttt{bool}
-	predicates. To do this, SMTCoq
+	SMTCoq is 
+	able to prove some
+	\texttt{Prop} predicates if they 
+	are reducible to their
+	corresponding 
+	\texttt{Bool} predicates. Such a 
+	reduction is specified using 
+	lemmas of equivalence between 
+	the two. SMTCoq
 	defines the \texttt{prop2bool} 
-	tactic that can convert the
-	\texttt{Prop} version of these 
-	predicates to their \texttt{bool}
-	counterparts. The \texttt{prop2bool}
+	tactic that converts a 
+	\texttt{Prop} predicate symbol
+	to its corresponding \texttt{bool}
+	counterparts, by applying the 
+	equivalence lemma, if one is available. 
+	The \texttt{prop2bool}
 	tactic only succeeds on a goal if 
 	it is able to recursively convert all 
-	the predicates in the goal. 
+	the predicate symbols in the goal. 
 	When a user asks 
 	SMTCoq to prove a goal consisting 
-	of \texttt{Prop} predicates, the 
+	of \texttt{Prop} predicate symbols, the 
 	\texttt{smt} tactic first calls the 
 	\texttt{prop2bool} tactic to 
-	convert all \texttt{Prop} predicates
-	to their corresponding \texttt{bool}
-	predicates. The \texttt{smt} tactic
+	convert all \texttt{Prop} predicate
+	symbols	to their corresponding 
+	\texttt{bool} predicate symbols. The 
+	\texttt{smt} tactic
 	then uses the SMT solver to 
 	prove the resulting Boolean goal 
 	(using the 
@@ -1489,11 +1550,12 @@ Qed.
 	already presented in Report 2.
 	
 	\begin{example}
-		\em Conveniently, the \texttt{Prop} to 
-		\texttt{Bool} conversion has 
-		been implemented for the 
-		predicates used above,
-		so SMTCoq can prove their 
+		\label{ex:proppred}
+		\em Conveniently, the 
+		\texttt{prop2bool} tactic 
+		is successful with the predicate 
+		symbols used in Example~\ref{ex:boolpred}.
+		So, SMTCoq can prove their 
 		corresponding \texttt{Prop}
 		theorems:
 		\begin{minted}{Coq}
@@ -1512,84 +1574,41 @@ Qed.
 		\hfill$\Box$
 	\end{example}
 	
-	The	\texttt{Prop} to \texttt{Bool} 
-	conversion of SMTCoq consists of 
-	applying proofs of equivalence 
-	between a \texttt{Prop} version
-	of a predicate and its \texttt{Bool}
-	version. For example, SMTCoq's 
-	bitvector library proves the 
-	following lemma of equivalence 
-	between the \texttt{Bool}
-	and \texttt{Prop} version of the 
-	unsigned less than predicate over
-	bit-vectors, which is applied 
-	by SMTCoq's \texttt{Prop} to 
-	\texttt{Bool} conversion when 
-	a user uses the \texttt{Prop}
-	version of this predicate in a 
-	query to SMTCoq, as in 
-	\texttt{BV\_ulteZeroProp}.
-	\begin{minted}{Coq}
+	Depending on the predicate symbol,
+	some of the equivalence lemmas 
+	between the \texttt{Prop} and 
+	\texttt{bool} versions are 
+	either in Coq's libraries, or
+	proved in SMTCoq's libraries.
+	
+	\begin{example}
+		\em SMTCoq's bitvector library 
+		proves the following lemma of 
+		equivalence between the 
+		\texttt{Bool} and \texttt{Prop} 
+		version of the unsigned less than 
+		predicate over bit-vectors.
+		This equivalence lemma is used
+		by SMTCoq's \texttt{prop2bool} 
+		tactic when 
+		a user uses the \texttt{Prop}
+		version of this predicate symbol in 
+		a query to SMTCoq, as in 
+		\texttt{BV\_ulteZeroProp} from
+		Example~\ref{ex:proppred}.
+\begin{minted}{Coq}
 Theorem bv_ult_B2P : forall n (a b : bitvector n), 
   bv_ult a b = true <-> bv_ultP a b.
-	\end{minted}
-	The \texttt{Prop} to \texttt{Bool}
-	conversion is possible for a predicate, 
-	if that predicate is decidable --- 
-	that is, for every possible input, the 
-	predicate either holds or doesn't 
-	hold. Since any \texttt{Bool}
-	predicate is decidable --- any Boolean 
-	term is either \texttt{true}
-	or \texttt{false} (\texttt{LEMBool}
-	from above is a proof of this), ---
-	an acceptable proof of the 
-	decidability of a \texttt{Prop}
-	predicate is a proof of its 
-	equivalence to the corresponding
-	\texttt{Bool} predicate.
-	This decidability can be proved
-	by via 
-	a lemma such as \texttt{bv\_ult\_B2P}. 
-	Some
-	of the lemmas used by the 
-	\texttt{Prop} to \texttt{Bool} 
-	conversion module are proved in SMTCoq's
-	libraries, others are proved in 
-	Coq's standard libraries. For 
-	example, Coq's library of integers
-	proves the equivalence between the 
-	Boolean and Propositional version 
-	of the integer less than predicate.
-	\begin{minted}{Coq}
+\end{minted}
+		
+		An example of an equivalence 
+		proved in a Coq library is
+		that of the integer less than 
+		predicate.
+\begin{minted}{Coq}
 Lemma ltb_lt (n m : Z) : (n <? m) = true <-> n < m.
-	\end{minted}
-	The module in SMTCoq that does
-	the conversion applies these 
-	equivalence lemmas to reduce a 
-	\texttt{Prop} predicate to a 
-	\texttt{Bool} one, before sending 
-	it to the SMT solver. An equivalence
-	between the \texttt{Prop} and 
-	\texttt{Bool} versions of a predicate
-	is necessary because goals in Coq 
-	can have hypotheses, and while 
-	one direction (of the implication)
-	in the equivalence
-	translates the \texttt{Prop} 
-	predicates in the goal, the 
-	other direction translates them
-	in the hypotheses. Concretely, 
-	for a \texttt{Prop} binary predicate 
-	over terms of type \texttt{t}
-	\texttt{P}, that has corresponding
-	\texttt{Bool} predicate \texttt{B},
-	the equivalence lemma is:
-	\begin{minted}{Coq}
-Lemma B2P : forall (x y : t)
-	\end{minted}
-	\begin{example}
+\end{minted}
+	\hfill $\Box$
 	\end{example}
 	
 \bibliographystyle{abbrv}
