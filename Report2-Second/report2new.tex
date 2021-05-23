@@ -116,8 +116,8 @@
 	\begin{center}
 		$\infer[rule\_name]{C}{P_1 & ... & P_n}$
 	\end{center}
-	which specifies that if the premises $P_1$ to 
-	$P_n$ hold, then the conclusion $C$
+	which specifies that if the premises 
+	$P_1,\ \ldots,\ P_n$ hold, then the conclusion $C$
 	holds.
 	
 	A goal in Coq is proved by 
@@ -189,7 +189,7 @@
 	
 	An \textit{atomic formula} is one 
 	of $\bot$, $t_1 = t_2$, 
-	$P^{\sigma_1,...,\sigma_m}$ and a 
+	$P^{\sigma_1,...,\sigma_m}$, and a 
 	\textit{literal} is an atomic 
 	formula or it's negation. 
 	A \textit{clause} is a 
@@ -207,7 +207,7 @@
 	or the empty conjunction which is 
 	trivially satisfiable).
 	
-	\noindent The resolution rule,
+	\noindent The resolution rule
 	simplifies two 
 	clauses to a new clause as follows:
 	\begin{center}
@@ -624,7 +624,7 @@ Qed.
 		to Boolean term \texttt{B}
 		from Figure~\ref{fig:smtcoqex}) is 
 		negated in Step 3.1, and converted 
-		to CNF normal form in Step 3.2.
+		to CNF in Step 3.2.
 		Finally, in Step 3.3, the 
 		unsatisfiability of $\neg B$ is 
 		proven by a refutation tree with 
@@ -918,12 +918,13 @@ Inductive op : Type :=
 	its (un)satisfiability. If the 
 	initial formula is unsatisfiable, 
 	then after running all steps,
-	the final \texttt{state} is the 
-	empty clause $\bot$. Currently, 
-	SMTCoq has steps that perform 
-	resolution, conversion of formulas 
-	to conjunction normal form (CNF), SMT 
-	solver simplifications, and one for 
+	the final \texttt{state} is expected
+	to be the empty clause $\bot$. 
+	Currently, SMTCoq has steps that 
+	perform resolution, conversion of 
+	formulas to conjunction normal 
+	form (CNF), SMT solver 
+	simplifications, and one for 
 	each theory. Each step is 
 	independently checked by a small 
 	checker. Each small
@@ -992,8 +993,8 @@ Inductive op : Type :=
 		framework is that  the 
 		semantics of formulas in 
 		the embedding are 
-		available to be used 
-		out of the box, while 
+		defined by the framework, 
+		while 
 		this was done, for 
 		instance, using the 
 		interpretation function
@@ -1124,7 +1125,7 @@ Inductive op : Type :=
 		deep embedding \texttt{f}
 		of a formula, and 
 		SMT proof certificate \texttt{t} of 
-		\texttt{f}, the proof of $\forall\ \nu,\ 
+		\texttt{$\neg$f}, the proof of $\forall\ \nu,\ 
 		\mathbb{I}_{\nu}(\texttt{f}) = 
 		\texttt{true}$ is simply:
 		\begin{center}
@@ -1144,7 +1145,7 @@ Inductive op : Type :=
 		Coq's reduction mechanism is 
 		invoked on \texttt{checker f t},
 		which usually consists of checking
-		a large non-trivial proof certificate. 
+		a large, non-trivial proof certificate. 
 		SMTCoq uses various optimizations 
 		to make these computations efficient.
 		As mentioned in the previous section,
@@ -1218,7 +1219,12 @@ Inductive op : Type :=
 			\texttt{ || ... || }
 			$\mathbb{I}_{\nu}$(\texttt{F$_2$})
 		\end{itemize}
-		Finally, we can define the interpretation 
+		where \texttt{\&\&} is the infix notation
+		for the conjunction operator over 
+		\texttt{bool}s and \texttt{||} is the 
+		infix notation for the disjunction operator 
+		over \texttt{bool}s. Finally, we can define 
+		the interpretation 
 		of the entire deep embedding of \texttt{f}:
 		\begin{align*}
 			\intr{\texttt{f}}\ &=\ 
@@ -1242,8 +1248,8 @@ Inductive op : Type :=
 		
 		In Step 4, a call to the checker 
 		checks that certificate \texttt{t} 
-		proves the unsatisfiability of $\neg$
-		\texttt{f}. This call is made
+		proves the unsatisfiability of 
+		\texttt{$\neg$f}. This call is made
 		when the reflection principle 
 		is instantiated with \texttt{f} and 
 		\texttt{t} in Step 5, and the 
@@ -1295,7 +1301,7 @@ Inductive op : Type :=
 	\paragraph{Modularity} The division 
 	of a proof into steps and 
 	the division of the main 
-	checker into checkers for these
+	checker into small checkers for these
 	steps contribute to a 
 	modular architecture where it 
 	is fairly straightforward to 
@@ -1373,17 +1379,17 @@ Inductive op : Type :=
 	The integration of Sledgehammer 
 	with SMT solvers is illustrated in 
 	Figure~\ref{fig:sledgehammer}. Given 
-	a conjecture $\Phi$ in 
+	a conjecture $\phi$ in 
 	Isabelle/HOL, Sledgehammer 
 	selects a set of facts 
 	$\Gamma$ that might be relevant 
-	to proving $\Phi$ and sends
+	to proving $\phi$ and sends
 	the formula $\Gamma \land \neg 
-	\Phi$ to the SMT solver to check 
+	\phi$ to the SMT solver to check 
 	for unsatisfiability. If the SMT 
 	solver finds the formula to be 
 	satisfiable, it returns a satisfying 
-	model, which serves as a 
+	model, which may serve as a 
 	counterexample 
 	of the conjecture. If the SMT 
 	solver is able to refute the 
@@ -1414,7 +1420,7 @@ Inductive op : Type :=
 	the SMT solver's many-sorted
 	first order logic (MSFOL),
 	the entirety of the formula
-	$\Gamma \land \neg \Phi$ may not 
+	$\Gamma \land \neg \phi$ may not 
 	be understandable to the SMT 
 	solver. Parts of the formula,
 	however, may be fully 
@@ -1545,9 +1551,8 @@ Inductive op : Type :=
 		such as $\lambda x. t$.
 		\item Variables of functional 
 		types and partial applications 
-		of functions to arguments are 
-		possible in HOL but not in 
-		MSFOL. For example, 
+		of functions to arguments. 
+		For example, 
 		$t^{\tau_1 \to \tau_2 \to 
 			\tau}\ t_1$ is a 
 		partial application of $t$ 
@@ -1591,8 +1596,7 @@ Inductive op : Type :=
 	requires a description of 
 	\textit{instantiation} of schematic 
 	entities w.r.t. 
-	monomorphic ones, which is defined
-	recursively as follows.
+	monomorphic ones.
 	Informally, a monomorphic type 
 	$\tau_M$ \textit{matches} a schematic 
 	type $\tau_S$ if it can replace the 
@@ -1607,7 +1611,8 @@ Inductive op : Type :=
 	${\texttt{Bool} \to \kappa}$
 	matches $\alpha \to \beta$,
 	where $\kappa$ is a monomorphic
-	type.
+	type. The instantiations are 
+	defined recursively as follows.
 	\begin{itemize}
 	\item Given a monomorphic constant 
 		$c^{\tau_M}$,  if $t^{\tau_S}$ is a 
@@ -1728,28 +1733,22 @@ Inductive op : Type :=
 		$(I_M, I_S)$.
 	\end{itemize}
 	Now, we can describe monomorphization.
-	\begin{itemize}
-		\item A \textit{monomorphization 
-			step} for $S$ w.r.t. $M$ maps 
-		the pair $(M,S)$ to the pair 
-		$(M \cup I_M, S \cup I_S)$.
-		\item The complete 
-		\textit{monomorphization} of $S$ 
-		w.r.t. $M$ is the computation of 
-		a least fixed point of 
-		monomorphization steps of $S$ 
-		w.r.t. $M$.
-		\item Given a HOL formula $F$, 
-		if $(M, S)$ is the partition of its 
-		constituents into monomorphic and 
-		schematic terms, then 
-		monomorphization of $S$ 
-		w.r.t. $M$ yields pair 
-		$(M^{\prime}, S^{\prime})$ and we 
-		call the conjunction of all terms in 
-		$M^{\prime}$ the monomorphization 
-		of $F$.
-	\end{itemize}
+	A \textit{monomorphization step} for 
+	$S$ w.r.t. $M$ maps the pair 
+	$(M,S)$ to the pair 
+	$(M \cup I_M, S \cup I_S)$. The 
+	complete monomorphization of 
+	$S$ w.r.t. $M$ is the computation of 
+	a least fixed point of monomorphization 
+	steps of $S$ w.r.t. $M$. Given a HOL 
+	formula $F$, if $(M, S)$ is the partition 
+	of its constituents into monomorphic and 
+	schematic terms, then monomorphization 
+	of $S$ w.r.t. $M$ yields pair 
+	$(M^{\prime}, S^{\prime})$ and we 
+	call the conjunction of all terms in 
+	$M^{\prime}$ the monomorphization 
+	of $F$.
 	Thus, using the above examples as 
 	instantiation steps, we have that 
 	monomorphization translates the formula $F$
@@ -1780,7 +1779,7 @@ Inductive op : Type :=
 	\end{align*}
 	\noindent The following are some 
 	limitations of this process:
-	\begin{itemize}
+	\begin{enumerate}
 		\item There have to be monomorphized 
 		terms in a formula, to guide the 
 		monomorphization process, so it 
@@ -1863,7 +1862,7 @@ Inductive op : Type :=
 		done smartly, and sometimes
 		repeated multiple times to 
 		be successful. 
-	\end{itemize} 
+	\end{enumerate} 
 	
 	\subsubsection{Lambda-Lifting}
 	$\lambda$-abstractions represent 
@@ -1910,13 +1909,14 @@ Inductive op : Type :=
 	%into additional arguments to $c$.
 	
 	\subsubsection{Explicit Applications}
-	For higer-order constants 
+	For higher-order constants 
 	occurring multiple times with 
 	a variable number 
-	of arguments, the minimal 
-	number of arguments are TODO
-	considered as the arity of the 
-	function, and any additional 
+	of arguments in a problem, 
+	the minimal number of arguments 
+	used with the constant in the 
+	problem is considered as the arity 
+	of the constant, and any additional 
 	arguments are expressed 
 	explicitly, with the help of a 
 	constructor 
@@ -1979,11 +1979,11 @@ Inductive op : Type :=
 	constants in MSFOL, such as 
 	logical connectives, would result 
 	in terms that aren't well-typed.
-	These are $\eta-$expanded and 
-	then $\lambda-$lifted. For example, 
+	Instead, these are $\eta-$expanded 
+	and then $\lambda-$lifted. For example, 
 	for the partially applied 
-	conjunction ($\land$, used as prefix 
-	here), a partial application is 
+	conjunction ($\land$, used in prefix 
+	notation here), a partial application is 
 	translated as follows.
 	\begin{align*}
 	\llbracket t [\land\ x] 
@@ -2019,10 +2019,13 @@ Inductive op : Type :=
 	\llbracket \texttt{list\ Bool}
 	\rrbracket &\cong \kappa_2
 	\end{align*}
-	TODO At the time of writing of Bohme et al. TODO,
-	SMT solvers didn't support sorts 
-	parameterized by other sorts, but they 
-	support them now, and these could be 
+	At the time of writing of Bohme et al.
+	(2012),	SMT solvers didn't support sorts 
+	parameterized by other sorts, but as of
+	SMTLIB version 2.5~\cite{BarFT-RR-15}, 
+	a parametric sort exists in 
+	SMTLIB-compliant solvers, 
+	and these could alternatively be 
 	used to encode compound types.
 	
 	While this is a straightforward
@@ -2088,7 +2091,58 @@ Inductive op : Type :=
 	the SMT solver will not necessarily be 
 	able to prove it.
 	
-	\subsection{Result of the solver}
+	\subsection{Integration of Solver Response}
+	Recall that given a conjecture $\phi$, 
+	Sledgehammer selects a set of facts 
+	$\Gamma$ and sends the formula 
+	$\Gamma \land \neg \phi$ to the SMT solver,
+	after translating it to fully first-order
+	using the translation described above.
+	Given $\llbracket \Gamma \land 
+	\phi \rrbracket$, the SMT solver may 
+	return either `sat', `unsat',
+	or `unknown'. If the SMT solver finds 
+	$\llbracket \Gamma \land 
+	\phi \rrbracket$ to be satisfiable
+	(sat), it could return a satisfying model;
+	either the original conjecture is valid
+	in Isabelle/HOL and the translation 
+	failed to capture enough information
+	about the conjecture to help the 
+	SMT solver conclude unsatisfiability, 
+	or, the conjecture is invalid, and the 
+	satisfying model returned by the SMT 
+	solver is a counterexample. An 
+	`unknown' result from the SMT 
+	solver is inconclusive. If the
+	SMT solver finds the translated
+	formula to be unsatisfiable, then 
+	the conjecture is provable in
+	Isabelle/HOL. There are 3 possible 
+	integrations of this result:
+	\begin{enumerate}
+		\item Trust the SMT solver as an oracle, 
+		and declare the conjecture to be proved in 
+		Isabelle/HOL. This is unideal since 
+		it extends the trust-base of Isabelle/HOL.
+		\item Use the SMT solver as a relevance 
+		filter by asking the SMT solver for 
+		an unsat-core --- the set of premises 
+		in $\Gamma$ that lead directly to 
+		the unsatisfiability of the formula. 
+		This would help Metis use a smaller
+		set of premises when it proves the 
+		conjecture in Isabelle/HOL.
+		\item Reconstruct proofs from the 
+		SMT solver in Isabelle/HOL by having
+		Metis replay the inferences of 
+		the proof tree.
+	\end{enumerate}
+	Bohme et al. use the third integration 
+	with proofs from the Z3 SMT solver, 
+	where for every inference node in the 
+	proof tree from Z3, Metis proves a 
+	theorem in Isabelle/HOL.
 	
 	\bibliographystyle{abbrv}
 	\bibliography{bib2new}
