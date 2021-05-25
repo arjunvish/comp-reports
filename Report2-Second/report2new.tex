@@ -80,7 +80,8 @@
 	as a meta-procedure. For example, 
 	reconstruction of SMT solver proofs 
 	in Isabelle/HOL are done external to 
-	the prover's logic~\cite{bohme}.
+	the prover's logic by 
+	Sledgehammer~\cite{bohme}.
 	Here, the external ATP's proof guides 
 	\textit{Metis}, Sledgehammer's
 	internal ATP in its proof search.
@@ -147,8 +148,8 @@
 	Many-sorted first-order logic (MSFOL)
 	extends first-order logic with 
 	types (or sorts). We present the 
-	syntax in this section and the 
-	semantics are presented in
+	syntax of MSFOL in this section and 
+	the semantics are presented in
 	\cite{Barrett2018}. Syntactically, 
 	the components of MSFOL are sorts 
 	$\sigma$, terms $t$, and 
@@ -181,7 +182,7 @@
 	formulas, quantified formulas, 
 	equality over terms, or predicates
 	symbols applied to terms. Connectives 
-	$\lor$, 
+	$\top$, $\lor$, 
 	$\to$, $\leftrightarrow$, and the 
 	existential	quantifier $\exists$ 
 	can be specified using the connectives 
@@ -329,7 +330,7 @@
 	SAT and SMT solvers, implemented as a 
 	Coq plugin. We will maintain a focus 
 	on the SMT solver integration of 
-	SMTCoq, noting that most features are 
+	SMTCoq, noting that many features are 
 	shared with the SAT	solver integration.
 	
 	\begin{figure}
@@ -389,7 +390,7 @@ Proof.
 		\end{center}
 		\vspace{-0.3in}
 		\begin{framed}
-			\textsc{Step 5}: Reflection principle 
+			\textsc{Step 5}: Reflection lemma 
 			reflects deep embedding to shallow 
 			embedding $\mathbb{I}(\texttt{f})$
 			via call to \texttt{checker} from 
@@ -444,7 +445,7 @@ Qed.
 	proved by a SAT solver. SMT solvers 
 	are able to deal with more expressive 
 	formulas than the one presented in the 
-	example here, but for simplicity
+	example here, but for simplicity,
 	we don't involve theory reasoning
 	in the example. An example involving 
 	theory literals is used in Report 3 
@@ -559,14 +560,14 @@ Qed.
 		terms of these custom types with 
 		respect to shallow terms. A 
 		deep embedding of SMT formulas 
-		is defined as the type 
+		is defined in SMTCoq as the type 
 		\texttt{form} in SMT solvers, 
 		and the interpretation function 
 		$\mathbb{I}$ (referred to in 
 		Step 5) expresses the meaning 
 		of terms in the deep embedding 
-		with respect to the shallow 
-		embedding of formulas in SMTCoq.
+		with respect those in the shallow 
+		embedding.
 	\end{itemize}
 	
 	\begin{example} 
@@ -605,14 +606,22 @@ Qed.
 	that it is unsatisfiable. A proof
 	from an SMT solver is a tree 
 	with the clauses (from the 
-	negation of the input formula) at
+	negation of the input formula) and 
+	theory lemmas --- clauses that are 
+	valid in particular theories --- at
 	the leaves and $\bot$
-	at the root. While the actual SMT 
+	at the root. The theory lemmas are 
+	backed by subproofs which come from 
+	the respective theory solver. Our 
+	example doesn't involve theory 
+	lemmas, but examples of these 
+	are presented in Report 3. While 
+	the actual SMT 
 	solver proof typically also consists 
 	of proof steps justifying CNF 
 	conversion steps, we omit the 
-	CNF conversion phase from our proofs.
-	The role of the SMT
+	CNF conversion phase from our 
+	presentation. The role of the SMT
 	solver from Figure~\ref{fig:smtcoqex}
 	is elaborated in Figure~\ref{fig:smtex}.
 	The SMT solver's proof creation is 
@@ -644,10 +653,10 @@ Qed.
 	the deep embedding to its shallow 
 	embedding. This is done via a 
 	correctness lemma for the checker
-	(also called the reflection principle),
+	(also called the reflection lemma),
 	which proves that for any 
 	formula in the deep embedding, and 
-	proof of the unsatisfiability of its 
+	a proof of the unsatisfiability of its 
 	negation from the SMT solver, if 
 	the checker returns \texttt{true}, 
 	then the formula in 
@@ -657,7 +666,7 @@ Qed.
 	the correctness lemma with $B$.
 	Step 5 from Figure~\ref{fig:smtcoqex} 
 	shows the instantiation of 
-	the reflection principle with 
+	the reflection lemma with 
 	the right objects to obtain the 
 	proof of our example formula. 
 	The interpretation function
@@ -665,13 +674,14 @@ Qed.
 	formulas in the deep embedding
 	to their shallow embeddings
 	given a valuation $\nu$ of the 
-	free variables, so 
+	free variables in them, so 
 	$\forall\ \nu,\ 
 	\mathbb{I}_{\nu}(\texttt{f})$
-	is exactly the proof required 
-	to close theorem $\texttt{F}$
+	is exactly the term required 
+	to close the proof of 
+	theorem $\texttt{F}$
 	in Coq. Steps 4 to 6 are covered
-	in detail in the rest of the report.
+	in detail in the rest of the section.
 	
 	\paragraph{Guarantees}
 	SMTCoq is \textit{sound} ---
@@ -695,7 +705,7 @@ Qed.
 	theories it currently supports 
 	are the theories of equality over
 	uninterpreted functions (EUF), 
-	liniear integer arithmetic (LIA),
+	linear integer arithmetic (LIA),
 	bit-vectors (BV), and arrays with
 	extensionality (AX).
 	
@@ -755,7 +765,7 @@ Inductive atom : Type :=
 	either interpreted functions 
 	(from a theory) or uninterpreted
 	functions to zero (constants) or more 
-	terms. Uninterpreted functions 
+	atoms. Uninterpreted functions 
 	are parameterized by machine 
 	integers while interpreted ones 
 	are encoded as follows:
@@ -765,7 +775,8 @@ Inductive op : Type :=
   | Eq (_ : type).
 	\end{minted}
 	Some of the interpreted integer 
-	functions are shown in \texttt{op}.
+	functions and the equality function 
+	are shown in \texttt{op}.
 	Similarly, there are interpreted 
 	functions from each theory.
 	
@@ -798,6 +809,7 @@ Inductive op : Type :=
 	Figure~\ref{fig:smtcoqex}.
 	
 	\begin{example}
+		\label{ex:deep}
 		\em The deep embedding of 
 		\begin{center}
 			$B: (b \land \neg c) \lor 
@@ -872,7 +884,7 @@ Inductive op : Type :=
 	own proof certificate format for SMT 
 	solver proofs and it translates proofs 
 	from all solvers to this certificate 
-	format, and \texttt{T} is the type of 
+	format. \texttt{T} is the type of 
 	these certificates that are 
 	checked by the checker. Note 
 	that these translators are outside 
@@ -887,7 +899,7 @@ Inductive op : Type :=
 		\begin{center}
 			\includegraphics[scale=0.3]{checker}
 			\caption{SMTCoq's \texttt{checker}
-				shown as the "Main checker" which 
+				shown as the ``Main checker" which 
 				interacts with various small checkers.}
 			\label{fig:checker}
 		\end{center}
@@ -898,12 +910,13 @@ Inductive op : Type :=
 	formula, the SMT solver operates in 
 	phases. It converts the formula into
 	CNF and performs some simplications
-	on it. It then abstracts any theory
-	literals into propositional ones 
-	and tries to satisfy the abstraction 
-	using the SAT solver; it does this
-	in a cycle where the theory
-	solvers give feedback
+	on it. It then tries to satisfy the
+	formula propositionally, by having 
+	a SAT solver run on what can 
+	be considered a propositional
+	abstraction of the theory literals.
+	It does this in a cycle where the 
+	theory solvers give feedback
 	by adding the negation of the 
 	satisfying model to the 
 	abstraction of the formula, if the 
@@ -973,9 +986,10 @@ Inductive op : Type :=
 	proof from the SMT solver, the 
 	corresponding \texttt{bool}
 	formula holds. The entities
-	that these deep embeddings 
+	that these deeply embedded formulas 
 	must correspond to are the shallow
-	embeddings, and the correspondence 
+	embeddings of the formulas, and the 
+	correspondence 
 	itself is defined by the 
 	interpretation function. The 
 	shallow embedding, interpretation
@@ -995,12 +1009,12 @@ Inductive op : Type :=
 		the embedding are 
 		defined by the framework, 
 		while 
-		this was done, for 
+		this is done, for 
 		instance, using the 
 		interpretation function
 		$\mathbb{I}$ for deep 
 		embedding \texttt{form}.
-		As in the deep embedding, 
+		As with the deep embedding, 
 		Boolean	formulas may have 
 		atoms containing terms from 
 		the theories of equality, 
@@ -1030,7 +1044,7 @@ Inductive op : Type :=
 			\texttt{val} \to \texttt{bool}$
 		\end{center}
 		The interpretation function maps 
-		\texttt{form} \texttt{f} to 
+		the \texttt{form} \texttt{f} to 
 		its shallow embedding, given 
 		a valuation $\nu$ of free 
 		variables in \texttt{f}. 
@@ -1047,8 +1061,8 @@ Inductive op : Type :=
 		example below.
 	
 		\item The \emph{reflection 
-		principle}, or the 
-		reflection lemma, is a 
+		lemma}, or the 
+		reflection principle, is a 
 		theorem in Coq, proving the 
 		checker correct in terms of 
 		the shallow embedding.
@@ -1075,11 +1089,11 @@ Inductive op : Type :=
 		interpretation of \texttt{f}
 		(in the shallow embedding)
 		holds, for any valuation of 
-		the variables in \texttt{f} 
-		(thus proving \texttt{f} valid). 
+		the variables in \texttt{f}, 
+		thus proving \texttt{f} valid. 
 	
 		It is called the reflection 
-		principle, because it uses 
+		lemma, because it uses 
 		computational reflection 
 		to shift the burden of the 
 		proof to a computation --- 
@@ -1155,10 +1169,10 @@ Inductive op : Type :=
 		of SMTCoq uses a non-recursive 
 		structure with hash-consing of terms
 		and machine integers to store variables,
-		among other optimization tricks.
+		among other optimization techniques.
 		Similar optimizations are also 
 		applied to certificates.
-		Since the reflection principle is 
+		Since the reflection lemma is 
 		proved for general formulas, 
 		each invocation of it only varies
 		in the deep embedding and proof 
@@ -1172,7 +1186,8 @@ Inductive op : Type :=
 \end{enumerate}
 	
 	\begin{example}
-		\em Recall that the deep embedding
+		\em Recall from Example~\ref{ex:deep}
+		that the deep embedding
 		\texttt{f} of $B$ from 
 		Figure~\ref{fig:smtex} is:
 		\begin{align*}
@@ -1221,7 +1236,8 @@ Inductive op : Type :=
 		\end{itemize}
 		where \texttt{\&\&} is the infix notation
 		for the conjunction operator over 
-		\texttt{bool}s and \texttt{||} is the 
+		\texttt{bool}s in Coq 
+		and \texttt{||} is the 
 		infix notation for the disjunction operator 
 		over \texttt{bool}s. Finally, we can define 
 		the interpretation 
@@ -1242,15 +1258,13 @@ Inductive op : Type :=
 				\&\& negb b) || negb a || c}
 		\end{center}
 		for arbitrary \texttt{a}, \texttt{b},
-		and \texttt{c}, which is what we 
-		get from 
-		$\forall\ \nu,\ \intr{\texttt{f}}$.
+		and \texttt{c}.
 		
 		In Step 4, a call to the checker 
 		checks that certificate \texttt{t} 
 		proves the unsatisfiability of 
 		\texttt{$\neg$f}. This call is made
-		when the reflection principle 
+		when the reflection lemma 
 		is instantiated with \texttt{f} and 
 		\texttt{t} in Step 5, and the 
 		\texttt{refl\_equal} tactic forces 
@@ -1259,7 +1273,7 @@ Inductive op : Type :=
 		\texttt{true}. If the call to the 
 		checker is convertible, that is,
 		the checker is successful, then 
-		the reflection principle produces 
+		the reflection lemma produces 
 		the proof of 
 		$\forall\ \nu,\ \intr{\texttt{f}}$
 		which is the necessary proof term 
@@ -1270,7 +1284,7 @@ Inductive op : Type :=
 		\hfill $\Box$
 	\end{example}
 
-	\paragraph{Small Checkers}
+	\paragraph{Small Checker Correctness}
 	The checker divides certificates
 	into steps that can be independently 
 	checked by small checkers.
@@ -1356,12 +1370,11 @@ Inductive op : Type :=
 	solvers~\cite{Barrett2018} and this 
 	work will be our focus for the 
 	rest of this section. As with 
-	SMTCoq, the SMT solvers integrated
-	with Sledgehammer produce a 
+	SMTCoq, the SMT solvers produce a 
 	proof object which is 
 	then reconstructed within
 	Isabelle/HOL by Sledgehammer, 
-	using Sledgehammer's own internal 
+	using Sledgehammer's internal 
 	ATP --- Metis~\cite{hurd2003d}. The 
 	proof object essentially guides 
 	the inference steps of the proof 
@@ -1447,9 +1460,10 @@ Inductive op : Type :=
 	respectively.
 	The translation is sound --- 
 	given a formula 
-	$F = \Gamma \land \Phi$ in HOL, if 
+	$F = \Gamma \land \phi$ in HOL, if 
 	$\llbracket F \rrbracket$ is refutable 
-	($\neg \llbracket F \rrbracket$
+	($\llbracket \Gamma \land \neg
+	\phi \rrbracket$
 	is unsatisfiable) in MSFOL, then 
 	$F$	is valid in HOL --- but not 
 	complete --- if $F$ is valid in 
@@ -1599,7 +1613,8 @@ Inductive op : Type :=
 	monomorphic ones.
 	Informally, a monomorphic type 
 	$\tau_M$ \textit{matches} a schematic 
-	type $\tau_S$ if it can replace the 
+	type $\tau_S$ if it or its components 
+	can replace the 
 	type variables in the schematic 
 	type. For example, \texttt{Bool} 
 	matches $\alpha$; and $\texttt{Bool} 
@@ -2022,7 +2037,8 @@ Inductive op : Type :=
 	At the time of writing of Bohme et al.
 	(2012),	SMT solvers didn't support sorts 
 	parameterized by other sorts, but as of
-	SMTLIB version 2.5~\cite{BarFT-RR-15}, 
+	SMTLIB version 2.5~\cite{BarFT-RR-15}
+	(2015), 
 	a parametric sort exists in 
 	SMTLIB-compliant solvers, 
 	and these could alternatively be 
@@ -2047,11 +2063,11 @@ Inductive op : Type :=
 	of Booleans. It is crucial that when 
 	\texttt{list Bool} is 
 	translated to $\kappa_2$, the 
-	premise selector of sledgehammer
+	premise selector of Sledgehammer
 	selects the right lemmas about 
 	Boolean lists to give to the 
 	SMT solver so it can reason 
-	about them. So in this step, 
+	about them. So, in this step, 
 	completeness depends heavily on 
 	premise selection.
 	
@@ -2061,11 +2077,11 @@ Inductive op : Type :=
 	to certian sorts in the SMTLIB standard.
 	Bohme et al. exploit the axiomatizations 
 	of these sorts by translating constants 
-	of these types from HOL to the 
-	corresponding MSFOL constants - these 
-	include linear arithmetic constants over 
+	and functions of these types from HOL to 
+	their corresponding MSFOL equivalents - these 
+	include linear arithmetic functions over 
 	integers and reals and bit-vector 
-	arithmetic. They even use the SMTLIB 
+	functions. They even use the SMTLIB 
 	theory of algebraic 
 	datatypes~\cite{BarST-PDPAR-06} to 
 	encode inductive types from Isabelle/HOL
@@ -2086,8 +2102,8 @@ Inductive op : Type :=
 	the constraints needed to prove something
 	about an uninterpreted constant, the SMT 
 	solver will not be able to prove it.
-	Even with interpreted constants, if the 
-	constants belong to an undecidable theory,
+	Even with interpreted functions, if the 
+	functions belong to an undecidable theory,
 	the SMT solver will not necessarily be 
 	able to prove it.
 	
@@ -2099,11 +2115,11 @@ Inductive op : Type :=
 	after translating it to fully first-order
 	using the translation described above.
 	Given $\llbracket \Gamma \land 
-	\phi \rrbracket$, the SMT solver may 
+	\neg \phi \rrbracket$, the SMT solver may 
 	return either `sat', `unsat',
 	or `unknown'. If the SMT solver finds 
 	$\llbracket \Gamma \land 
-	\phi \rrbracket$ to be satisfiable
+	\neg \phi \rrbracket$ to be satisfiable
 	(sat), it could return a satisfying model;
 	either the original conjecture is valid
 	in Isabelle/HOL and the translation 
@@ -2133,7 +2149,7 @@ Inductive op : Type :=
 		This would help Metis use a smaller
 		set of premises when it proves the 
 		conjecture in Isabelle/HOL.
-		\item Reconstruct proofs from the 
+		\item Reconstruct the proof from the 
 		SMT solver in Isabelle/HOL by having
 		Metis replay the inferences of 
 		the proof tree.
