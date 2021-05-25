@@ -1,0 +1,1380 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
+\usepackage{minted}
+\usepackage{stmaryrd}
+\usepackage{verbatim}
+
+\usepackage{hyperref}
+\hypersetup{
+ pdfborder={0 0 0},
+ colorlinks=true,
+ linkcolor=blue,
+ urlcolor=blue,
+ citecolor=blue
+}
+\usepackage{cleveref}
+
+
+\newcommand{\rem}[1]{\textcolor{red}{[#1]}}
+\newcommand{\ed}[1]{\textcolor{blue}{#1}}
+\newcommand{\ct}[1]{\rem{#1 --ct}}
+
+\begin{document}
+\title{Comprehensive Exam Report 2 - Relating Higher Order and First-Order Logics}
+\author{Arjun Viswanathan}
+\date{}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+	In this report, we will discuss the 
+	internals of two tools that use 
+	automatic theorem provers (ATPs) to 
+	provide automation to interactive 
+	theorem provers (ITPs) - 
+	SMTCoq~\cite{DBLP:phd/hal/Keller13} 
+	and Sledgehammer's SMT solver 
+	integration by Bohme et al.~\cite{bohme}. 
+	Specifically, we will look at the 
+	following aspects of each tool. For 
+	SMTCoq, we will study 
+	how proof by reflection is used to 
+	\textit{reflect} proofs from an SMT 
+	solver to Coq's logic, and the data 
+	structures used to facilitate this 
+	reflection.	Sledgehammer provides a 
+	translation from higher-order logic 
+	(HOL) to many-sorted first-order logic 
+	(MSFOL), so that SMT-solvers can be 
+	used on HOL problems. We will look at 
+	this translation in detail.
+
+\section{SMTCoq}
+\label{sec:smtcoq}
+	SMTCoq is a skeptical cooperation 
+	between the Coq proof assistant, and 
+	SAT and SMT solvers, implemented as a 
+	Coq plugin. We will maintain a focus 
+	on the SMT solver integration of 
+	SMTCoq, noting that most features are 
+	shared with the SAT	solver integration.
+	
+	ATPs like SMT solvers are susceptible 
+	to bugs due to the large code-bases 
+	used to support	their automation. 
+	ITPs like Coq have a small trustable 
+	proof kernel which would be 
+	compromised if they were to trust
+	external results. In a collaboration
+	with SMT solvers, to avoid extending 
+	Coq's trust-base, SMTCoq requires the 
+	solvers to be proof-producing, and uses 
+	Coq's computational capabilities 
+	to lift these up to Coq proofs, in a 
+	process called computational 
+	reflection.
+	
+	\subsection{Proof by Reflection}
+	\label{reflect}
+	\texttt{Prop} is the type of 
+	constructive propositions in Coq. 
+	Additionally, Coq also has a 
+	classical Boolean type, 
+	\texttt{bool}, which is 
+	computational --- it is an 
+	inductive type with constructors 
+	\texttt{true} and \texttt{false}. 
+	As a consequence, one can 
+	perform case analysis on 
+	\texttt{bool} values since they 
+	are decidable. Propositions 
+	aren't decidable - one cannot 
+	observe whether any given 
+	proposition is true or false. 	
+	Using the \texttt{bool} type, a 
+	first-order formula can be 
+	expressed in Coq as a \texttt{bool}
+	term. For example, for Booleans 
+	\texttt{a} and \texttt{b}, 
+	\texttt{implb a (a || b)} 
+	expresses the first-order formula 
+	$a \to a \lor b$, where the logical 
+	implication and logical disjunction 
+	symbols are \texttt{implb} and 
+	\texttt{||} for Coq Booleans, and 
+	those for first-order logic are 
+	$\to$ and $\lor$, respectively. The 
+	fact that a Boolean formula in Coq 
+	holds is expressed by equating it to 
+	true.
+\begin{minted}{Coq}
+Lemma BoolForm : forall (a b : bool), implb a (a || b) = true.
+\end{minted}
+	Note that this is a classical formula 
+	in Coq expressed using the Boolean type. 
+	Using Coq's constructive proposition type,
+	the same formula is expressed as follows.
+\begin{minted}{Coq}
+Lemma PropForm : forall (a b : Prop), a -> a \/ b.
+\end{minted}
+	where \texttt{->} and $\backslash/$ are 
+	Coq's propositional implication and 
+	disjunction. SMTCoq proves formulas 
+	in Coq that have Boolean type, and 
+	not formulas over Coq propositions.
+	 
+	The process of computational 
+	reflection relies heavily on 
+	Coq's \textit{conversion rule}.
+	Coq's Calculus of Inductive 
+	Constructions (CIC) is a 
+	$\lambda-$calculus that has a 
+	reduction mechanism for terms. The
+	reduction rules form a strongly 
+	normalizing system. The calculus's
+	conversion rule allows a term to 
+	have multiple types, as long as the 
+	types have the same normal forms. For 
+	instance, for some predicate $P$ 
+	over natural numbers, a term that 
+	has type $P(10)$ also has type 
+	$P(5*2)$ and $P(20-10)$. Due 
+	to the conversion rule, 
+	computations can be used in Coq's 
+	reasoning and proof terms can be 
+	found simply by computing normal 
+	forms of types.
+	
+	\begin{comment}
+	The 
+	conversion rule includes more 
+	complicated reductions of 
+	types that include $\beta$-reductions,
+	$\alpha-$conversions (that perform
+	variable renaming), 
+	$\zeta-$conversions (of local 
+	\texttt{let} definitions), and 
+	$\eta-$conversion of terms with a 
+	functional type. These are explained 
+	using the following example: the type 
+	of the term 
+	\begin{center}
+		\texttt{(fun (x : Type $\to$ Type) 
+		$\implies$ x) (fun (z : Type) 
+		$\implies$ let a := z in a)}  
+	\end{center}
+	is the same as the type of the term 
+	\begin{center}
+		\texttt{fun (y : Type) $\implies$ y}.
+	\end{center}
+	In other words, the two terms are 
+	convertible to each other. 
+	\texttt{Type} is part of Coq's
+	type hierarchy, and an instance of 
+	\texttt{Type} is a set of terms 
+	(or a type at the bottom of the 
+	hierarchy) such as \texttt{nat},
+	the type of natural numbers (to be 
+	precise, \texttt{Set} is the 
+	type of \texttt{nat} and 
+	\texttt{Type} is the type of 
+	\texttt{Set}, but this simplification
+	still makes the point). The syntax
+	\texttt{fun (x : $\alpha$) $\implies$
+	y} represents a $\lambda$-abstraction 
+	$\lambda(x : \alpha).y$. The 
+	type conversion takes place as follows.
+	The term
+	\begin{center}
+		\texttt{(fun (x : Type $\to$ Type) 
+			$\implies$ x) (fun (z : Type) 
+			$\implies$ let a := z in a)}  
+	\end{center}
+	reduces to
+	\begin{center}
+	\texttt{(fun (x : Type $\to$ Type) 
+		$\implies$ x) (fun (z : Type) 
+		$\implies$ z)}	
+	\end{center}
+	by $\zeta-$reduction of the \texttt{let}
+	expression. $\beta-$reducing this 
+	term, gives 
+	\begin{center}
+		\texttt{fun (z : Type) 
+			$\implies$ z}	
+	\end{center}	 
+	which is $\alpha-$convertible to 
+	\begin{center}
+		\texttt{fun (y : Type) $\implies$ y}.
+	\end{center}
+	by renaming the $z$ to $y$.
+	\end{comment}
+	
+	A proposition in Coq is proved by 
+	providing to Coq's type checker, a 
+	proof term that inhabits the 
+	proposition; in other words, a 
+	proof term that has the proposition 
+	as its type. Automation can be 
+	added to Coq by implementing 
+	methods in Coq, that find the right 
+	proof term for propositions --- a 
+	process called \textit{proof search}. 
+	Such a method could use an external 
+	solver, such as an ATP, to guide 
+	proof search. However, ATPs 
+	typically provide automatic 
+	proofs without justification - 
+	by answering the question `does F 
+	hold?' with	yes/no. To use the 
+	result of an SMT solver without 
+	compromising Coq's kernel, the ATP 
+	would have to produce, in addition 
+	to a result, a proof object
+	that justifies the result. This 
+	proof object will guide the proof search 
+	in Coq in a process called 
+	\textit{proof reconstruction}. 
+	Reconstruction can be implemented 
+	as a meta-procedure. For example, 
+	reconstruction of SMT solver proofs 
+	in Isabelle/HOL are done external to 
+	the prover's logic~\cite{bohme}. 
+	This reconstruction can also be 
+	expressed within the prover's logic 
+	by a process called 
+	\textit{computational reflection}, 
+	which relies on the previously 
+	mentioned reduction mechanism and 
+	the conversion rule.
+	
+	Given a logical framework A, and 
+	a logical framework B, in which we 
+	want to represent the language of A, 
+	there are two ways to achieve this
+	representation, and 
+	both of these are necessary for 
+	reflection:
+	\begin{itemize}
+		\item \textit{Shallow Embedding: }
+		Use types and terms in B that 
+		correspond to those of A, to 
+		represent terms of A.
+		\item\textit{Deep Embedding: }
+		Define custom types in B that 
+		correspond to those of A, and 
+		define inside B, the meaning of 
+		terms of these custom types with 
+		respect to shallow terms.
+	\end{itemize}
+
+	SMT solvers prove formulas over 
+	sorted (typed) terms and these 
+	sorts correspond to types in 
+	Coq that are specified in the 
+	Coq standard library. Terms of 
+	these library types represent a 
+	shallow embedding of SMT 
+	terms within Coq and SMTCoq is used 
+	to prove Coq propositions over such 
+	shallow terms. Examples are the 
+	Coq library for integers or 
+	the $\mathbb{Z}$ type~\cite{CoqZ},
+	and the one for Booleans or the 
+	\texttt{bool} type~\cite{CoqBool}.
+	The deep embedding of SMT terms 
+	in Coq uses Coq's inductive types,
+	machine integers and arrays. In 
+	addition to the other benefits 
+	of reflection mentioned below,
+	the choice of machine integers 
+	and arrays contribute to 
+	efficient storage of large 
+	SMT proofs. Deep terms are harder 
+	to specify, since features such as 
+	binders 
+	and variable substitution must be 
+	handled by writing functions 
+	for these within Coq. These 
+	features are available as part 
+	of Coq's standard library 
+	for shallow terms. 
+	
+	The main components of SMTCoq are 
+	a \textit{checker}, that checks 
+	a proof produced by an ATP for a 
+	formula against the deep embedding 
+	of that formula; and a 
+	\textit{reflection principle}, 
+	or a correctness lemma of the checker,
+	that performs the reflection of the 
+	formula	in the deep embedding to the 
+	formula in the shallow embedding. 
+	An \textit{interpretation function}
+	defines the meaning of terms and types 
+	in the deep embedding in terms of their
+	shallow counterparts and is used in the 
+	reflection principle. The reflection 
+	principle 
+	proves that if a checker is able to 
+	check a formula in the deep embedding,
+	its interpretation (in the shallow 
+	embedding) is true. A proof of 
+	a formula in the shallow embedding 
+	in Coq is then just an instantiation 
+	of this lemma with a deep formula that 
+	the SMT solver is able to prove.
+	Work is then done by Coq's 
+	computational mechanism in running
+	the checker on the deep embedding 
+	of the formula and the proof 
+	from the SMT solver. Deep and shallow 
+	embeddings were first introduced 
+	while discussing embedding 
+	hardware description languages 
+	in the HOL theorem 
+	prover~\cite{10.5555/645902.672777}.
+	
+	Formally, reflection of proofs 
+	in SMTCoq is defined as follows. 
+	In Coq, we have 
+	\begin{itemize}
+		\item \texttt{form} --- a data 
+			structure representing the 
+			deep embedding of SMT formulas
+		\item \texttt{bool} --- the 
+			Boolean type in Coq 
+			representing the shallow 
+			embedding of SMT formulas
+		\item $\mathbb{I}$ --- the 
+			interpretation function, which 
+			is a Boolean predicate over 
+			\texttt{form}s and 
+			valuations of free variables 
+			(of type 
+			\texttt{form} $\to$ \texttt{val}
+			$\to$ \texttt{bool}). The 
+			interpretation function provides 
+			a fixed interpretation of types, 
+			and	terms modulo free variables. 
+			The interpretation of terms uses 
+			a valuation function $\nu$ that 
+			interprets free variables. The 
+			interpretation of a formula 
+			\texttt{f} for a valuation $\nu$ 
+			is specified as $\mathbb{I}_{\nu}
+			(\texttt{f})$.
+		\item \texttt{T} --- the type of 
+			proof objects from the SMT 
+			solver
+	\end{itemize}
+	Reflection requires the following:
+	\begin{itemize}
+		\item a function 
+		\texttt{checker : form $\to$ T $\to$ 
+		bool} implemented in Coq such that 
+		\texttt{checker f t} is 
+		\texttt{true} if proof object 
+		\texttt{t} justifies the 
+		unsatisfiability of \texttt{$\neg$f}
+		(and as a consequence, the 
+		validity of \texttt{f}).
+		\item the reflection principle, that 
+		proves the correctness of 
+		\texttt{checker}:
+		\begin{align*}
+			\texttt{checker\_correct :} 
+			\forall\ \texttt{(f : form)
+			(t : T) checker f t = true} \to \\
+			\forall\ (\nu : \texttt{val}),\ 
+			\mathbb{I}_{\nu}(\texttt{f}) = 
+			\texttt{true}
+		\end{align*}
+	\end{itemize}
+	The reflection principle allows
+	us to use \texttt{checker}, which 
+	is computationally heavy, to 
+	produce proofs of formulas. For any
+	formula \texttt{f}, and SMT proof 
+	\texttt{t} of \texttt{f},
+	the proof of $\forall\ \nu,\ 
+	\mathbb{I}_{\nu}(\texttt{f}) = 
+	\texttt{true}$ is simply:
+	\begin{center}
+		$\texttt{checker\_correct f t
+		(refl\_equal (checker f t) true)}$
+	\end{center}
+	where \texttt{refl\_equal} 
+	(reflexivity of equality) is a tactic
+	that forces the Coq type checker to 
+	perform an equality check between 
+	$\texttt{checker f t}$ and 
+	\texttt{true} by reduction. The only 
+	difference in each invocation of the 
+	reflection principle is the checking 
+	done by \texttt{checker}.
+	\texttt{refl\_equal} calls the 
+	checker and puts the burden of the 
+	proof on Coq's reduction mechanism
+	to reduce $\texttt{checker f t}$
+	to \texttt{true}. Since proofs from 
+	SMT solvers can be quite large, their
+	reduction by \texttt{checker} may
+	include non-trivial computations.
+	
+	\subsection{Deep and Shallow Embeddings}
+	In the following, we present 
+	a simplified version of SMTCoq's 
+	deep embedding. The actual embedding 
+	uses Coq's machine integers to 
+	implement sharing of terms and 
+	optimize space, but an unoptimized 
+	and simpler version is presented 
+	below. 
+	
+	\texttt{form} is the type of 
+	formulas:
+	\begin{minted}{coq}
+Inductive form : Type :=
+	| Fatom (_ : atom)
+	| Ftrue
+	| Ffalse
+	| Fnot (_ : form)
+	| Fand (_ : array form)
+	| For (_ : array form)
+	| Fimp (_ : array form)
+	| Fxor (_ _ : form)
+	| Fiff (_ _ : form)
+	| Fite (_ _ _ : form)
+	\end{minted}
+	where a formula can be an atom, 
+	\texttt{true}, \texttt{false};
+	a negation of a formula; a 
+	conjunction, disjunction, or 
+	implication of two or more 
+	formulas; an exclusive-or or
+	an equivalence of two formulas; 
+	or an if-then-else of three formulas.
+	\texttt{atom} is the type of atoms, 
+	which can be variables, 
+	constants, or applications of 
+	functions belonging to 
+	different theories.
+	
+	SMTCoq implements the \texttt{checker}
+	function as the \textit{main checker}
+	which composes the work done 
+	by various \textit{small checkers}. 
+	The main checker has the following 
+	type.
+	\begin{center}
+		\texttt{main\_checker : 
+			form $\to$ T $\to$ bool}	
+	\end{center}
+	Given deep embedding \texttt{f} of 
+	type \texttt{form}
+	and proof object \texttt{t} of type 
+	\texttt{T}, it checks whether \texttt{t} 
+	from the SMT solver 
+	is a proof of the unsatisfiability of
+	\texttt{$\neg$f}, and returns 
+	\texttt{true} if it is. This is 
+	equivalent to a proof of validity of 
+	\texttt{f}. The checking of 
+	unsatisfiability is divided into 
+	multiple \textit{steps}
+	and each step is independently checked 
+	by a small checker. Currently, there are 
+	small checkers for steps that perform 
+	resolution, conversion of formulas to 
+	conjunction normal form (CNF), SMT 
+	solver simplifications, and one for 
+	each theory: equality over 
+	uninterpreted functions (EUF), linear 
+	integer arithmetic (LIA), bit-vectors 
+	(BV), and functional arrays with 
+	extensionality (AX). Each small
+	checker simplifies \texttt{f} via 
+	the step it performs, and the main 
+	checker ultimately checks that the 
+	input is finally transformed to 
+	$\bot$ or \texttt{False} which is the 
+	simplest unsatisfiable formula.
+	The reflection principle is a proof of 
+	correctness of the main checker:
+	\begin{align*}
+		\texttt{main\_checker\_correct: } 
+		&\forall\ \texttt{f t},\ 
+		\texttt{main\_checker f t = true}\\
+		&\to \forall\ \nu,\ \mathbb{I}_{\nu}
+		(\texttt{f}) = \texttt{true}
+	\end{align*}
+	where $\nu$ is the valuation 
+	of free variables used by 
+	the interpretation function 
+	$\mathbb{I}$. If the checker 
+	is successful in checking the 
+	proof of a formula in the deep
+	embedding, the reflection 
+	principle converts this into 
+	a proof of the formula in the 
+	shallow embedding, via the 
+	interpretation function, and 
+	by doing this for all valuations,
+	it proves the validity of the 
+	formula (it is true for any 
+	model). Since each small
+	checker modifies \texttt{f}, 
+	there is a similar correctness 
+	proof for each small checker 
+	that guarantees that it doesn't
+	change the (un)satisfiability of 
+	\texttt{$\neg$f} during this process, 
+	and the proof of 
+	\texttt{main\_checker\_correct}
+	is composed of the correctness
+	proofs of the small checkers.
+	
+	The checker is \textit{sound} ---
+	when it returns \texttt{true} for 
+	a formula, it is valid and its 
+	negation is unsatisfiable --- but 
+	not \textit{complete} --- when it 
+	returns \texttt{false}, we can't be 
+	certain that the formula isn't valid
+	or that its negation is satisfiable.
+	This is because, the underlying SMT 
+	solver 
+	cannot decide certain formulas -
+	given a formula, it could either 
+	return \texttt{sat} 
+	(satisfiable), \texttt{unsat} 
+	(unsatisfiable), or 
+	\texttt{unknown} (`don't know').
+
+	
+\section{Sledgehammer}
+\label{sec:hammer}
+	Isabelle~\cite{DBLP:journals/corr/cs-LO-9301106} 
+	is an LCF-style system that 
+	provides a meta-logic which can be 
+	instantiated with other logics.
+	Isabelle/HOL~\cite{10.5555/1791547}, 
+	one of the most popular Isabelle 
+	instantiations, implements a 
+	classical higher-order logic. 
+	
+	Sledgehammer is
+	an Isabelle/HOL component that 
+	uses external ATPs to enhance 
+	Isabelle/HOL with proof 
+	automation. Initially, these 
+	ATPs only included resolution 
+	provers~\cite{10.1007/978-3-642-39799-8_1}.
+	The work by Bohme et 
+	al.~\cite{bohme} involved 
+	extending Sledgehammer to 
+	incorporate SMT
+	solvers~\cite{Barrett2018} and this 
+	work will be our focus for the 
+	rest of this section. As with 
+	SMTCoq, the SMT solvers integrated
+	with Sledgehammer produce a 
+	proof object which is 
+	then reconstructed within
+	Isabelle/HOL by Sledgehammer, 
+	using Sledgehammer's own internal 
+	ATP --- Metis~\cite{hurd2003d}. The 
+	proof object essentially guides 
+	the inference steps of the proof 
+	within Isabelle/HOL.
+	
+	Given a conjecture $\Phi$ in 
+	Isabelle/HOL, Sledgehammer 
+	selects a set of facts 
+	$\Gamma$ that might be relevant 
+	to proving $\Phi$ and sends
+	the formula $\Gamma \land \neg 
+	\Phi$ to the SMT solver to check 
+	for unsatisfiability. If the SMT 
+	solver is able to refute the 
+	conjecture (i.e., conclude 
+	the unsatisfiability of its 
+	negation), it returns 
+	a proof. Since Isabelle/HOL 
+	implements a higher-order logic 
+	(HOL), which 
+	is more expressive than 
+	the SMT solver's many-sorted
+	first order logic (MSFOL),
+	the entirety of the formula
+	$\Gamma \land \neg \Phi$ may not 
+	be understandable to the SMT 
+	solver. Parts of the formula,
+	however, may be fully 
+	first-order (FOL is 
+	a subset of HOL). Bohme et al.
+	extended Sledgehammer with 
+	a translation from higher-order 
+	to first-order logic, so that 
+	it can reason about the remainder
+	of the formula. This translation
+	is discussed in the rest of this 
+	section.
+	
+	\subsection{Higher-Order Logic}
+	\label{sec:hol}
+	In this section, we specify the 
+	syntax of higher-order logic 
+	and delegate the explanation of 
+	semantics to a 
+	reference~\cite{10.5555/155278}. 
+	HOL consists of 
+	types $\tau$ and terms $t$. 
+	\begin{align*}
+	\tau &:= \alpha\ |\ \kappa^n\ 
+	\tau_1 ... \tau_n\\
+	t &:= x^{\tau}\ |\ c^{\tau}\ |\ t_1\ t_2\ 
+	|\ \lambda x^{\tau}.t
+	\end{align*}	
+	Types $\tau$ are either type
+	variables $\alpha$ or 
+	applications of type 
+	constructors $\kappa^n$ to 
+	$n$ types ($n$ is usually omitted). 
+	Particular types of interest are 
+	the function type --- formed by 
+	applying the arrow type constructor 
+	$\to^{2}$ to other types, the 
+	Boolean type --- $\texttt{bool}$ 
+	(or $\texttt{bool}^0$), the type of 
+	natural numbers --- \texttt{nat},
+	and integers --- \texttt{int}.
+	Terms are typed variables, 
+	typed constants, applications 
+	of terms to terms, or typed
+	$\lambda-$ abstractions. We have
+	the usual Boolean constants 
+	representing logical connectives
+	and quantifiers. For instance, 
+	logical negation, 
+	$\neg^{\texttt{bool} \to 
+	\texttt{bool}}$, universal 
+	quantification,
+	$\forall^{\alpha \to 
+	\texttt{bool} \to \texttt{bool}}$, 
+	and polymorphic equality,
+	$=^{\alpha \to \alpha 
+	\to \texttt{bool}}$. Type 
+	annotations for terms are also 
+	often omitted when understood
+	from context.
+
+	\subsection{Many-Sorted First-Order Logic}
+	\label{sec:msfol}
+	Many-sorted first-order logic extends
+	first-order logic (FOL) with 
+	types or sorts. We present the 
+	syntax in this section and the 
+	semantics are presented in
+	\cite{Barrett2018}. Syntactically, 
+	the components of MSFOL are sorts 
+	$\sigma$, terms $t$, and 
+	formulas $\phi$. Sorts are 
+	atomic entities that 
+	represent types. Function types 
+	--- ($\sigma_1$, ..., $\sigma_n$) 
+	$\to$ $\sigma$ ---
+	and relation types 
+	--- ($\sigma_1$, ..., $\sigma_m$)
+	are defined over sorts, and 
+	are types of functions and 
+	predicates below. Terms and 
+	formulas are specified as:
+	\begin{align*}
+		t &:= x^{\sigma}\ |\ 
+		f^{(\sigma_1, ..., \sigma_n) \to 
+		\sigma}	(t_1, ..., t_n)\\
+		\phi &:= \bot\ |\ \neg \phi\ |\ 
+		\phi_1 \land \phi_2\ |\ \forall 
+		x^{\sigma} . \phi\ |\ t_1 = t_2
+		\ |\ P^{\sigma_1,...,\sigma_m}
+		(t_1, ..., t_m)
+	\end{align*}
+	Terms are either sorted variables, 
+	or applications of functions to terms.
+	Formulas are constants or logical 
+	connectives applied to other 
+	formulas, quantified formulas, 
+	equality over terms, or predicates 
+	over terms. Connectives $\lor$, 
+	$\to$, $\iff$, and the existential
+	quantifier $\exists$ can be 
+	specified using the connectives 
+	and quantifiers mentioned above.
+	
+	\subsection{Translation}
+	\label{sec:trans}
+	Sledgehammer's SMT solver 
+	integration (Bohme et al.) performs 
+	a translation 
+	of HOL formulas to MSFOL formulas.
+	$\llbracket\ \rrbracket$
+	is the translation function 
+	that maps both HOL types and 
+	terms to MSFOL sorts and terms,
+	respectively.
+	The translation is sound --- 
+	given a formula 
+	$F = \Gamma \land \Phi$ in HOL, if 
+	$\llbracket F \rrbracket$ is refutable 
+	($\neg \llbracket F \rrbracket$
+	is unsatisfiable) in MSFOL, then 
+	$F$	is valid in HOL --- but not 
+	complete --- if $F$ is valid in 
+	HOL, $\llbracket F \rrbracket$ is 
+	not necessarily refutable in MSFOL. 
+	The translation might not carry over 
+	enough information about certain HOL 
+	formulas so that the their 
+	refutability can be concluded in 
+	MSFOL, which is	expected, since HOL 
+	is a much more expressive logic than 
+	MSFOL. 
+	
+	Since MSFOL is a subset of 
+	HOL, we can see HOL as a 
+	composition of 
+	MSFOL-equivalent logic 
+	and the rest:
+	\begin{center}
+		HOL = MSFOL-equiv + non-MSFOL 
+	\end{center}
+	The MSFOL-equiv part of HOL has 
+	a straightforward transformation 
+	to MSFOL:
+	\begin{itemize}
+	\item Only nullary type 
+		constructors from HOL have
+		equivalent MSFOL sorts:
+		\begin{center}
+			$\llbracket \kappa^{0} 
+			\rrbracket = \sigma $
+		\end{center}
+	\item Applications of 
+		Boolean connectives,
+		quantifiers, equalities and 
+		other predicates (functions 
+		returning \texttt{Bool}) to 
+		terms have corresponding 
+		MSFOL formulas:
+		\begin{align*}
+			\llbracket False 
+			\rrbracket &\cong \bot \\
+			\llbracket \neg t \rrbracket 
+			&\cong \neg \llbracket t 
+			\rrbracket\\
+			\llbracket t \land u 
+			\rrbracket &\cong \llbracket t 
+			\rrbracket \land \llbracket u
+			\rrbracket\\
+			\llbracket t = u \rrbracket 
+			&\cong \llbracket t 
+			\rrbracket = \llbracket u
+			\rrbracket\\
+			\llbracket c^{\tau_1 \to ... 
+			\to \tau_n \to \texttt{bool}} 
+			t_1 ... t_n \rrbracket &\cong 
+			c^{\llbracket \tau_1 \rrbracket, 
+			..., \llbracket \tau_n \rrbracket}
+			(\llbracket t_1 \rrbracket, ..., 
+			\llbracket t_n \rrbracket)\\
+			\llbracket \forall x^{\tau}.t 
+			\rrbracket &\cong (\forall 
+			x^{\llbracket \tau \rrbracket}.
+			\llbracket t \rrbracket)
+		\end{align*}
+	\item Variables and function 
+		applications (of return type 
+		other than \texttt{bool}), 
+		including non-functional 
+		constants have MSFOL 
+		equivalents.
+		\begin{align*}
+			\llbracket x^{\tau} 
+			\rrbracket &\cong 
+			x^{\llbracket \tau \rrbracket}\\
+			\llbracket c^{\tau_1 \to ... 
+			\to \tau_n \to \tau} 
+			t_1 ... t_n \rrbracket &\cong 
+			c^{(\llbracket \tau_1 \rrbracket, 
+			..., \llbracket \tau_n \rrbracket)
+			\to \llbracket \tau \rrbracket}
+			(\llbracket t_1 \rrbracket, ..., 
+			\llbracket t_n \rrbracket)
+		\end{align*}
+	\end{itemize}
+
+	The more interesting parts of the 
+	transformation deal with 
+	translating the non-first-order
+	elements of HOL to MSFOL. These 
+	include:
+	\begin{itemize}
+		\item Type variables $\alpha$
+		and \textit{compound types} ---
+		applications of type constructors
+		$\kappa^n$ with $n > 0$ to 
+		types.
+		\item $\lambda$-abstractions 
+		such as $\lambda x. t$.
+		\item Variables of functional 
+		types and partial applications 
+		of functions to arguments are 
+		possible in HOL but not in 
+		MSFOL. For example, 
+		$t^{\tau_1 \to \tau_2 \to 
+		\tau}\ t_1$ is a 
+		partial application of $t$ 
+		which is a variable of type 
+		$\tau_1 \to \tau_2 \to \tau$
+		to argument $t_1$ (of type 
+		$\tau_1$) and this 
+		application has type 
+		$\tau_2 \to \tau$.
+		This is not directly 
+		expressible in MSFOL.
+	\end{itemize}
+
+	\subsubsection{Monomorphization}
+		Recall that HOL types $\tau$ are 
+		either type	variables $\alpha$ or 
+		applications of type constructors 
+		$\kappa^n$ to $n$ types.
+		A \textit{monomorphic type} is a
+		type without type variables 
+		(e.g. $\kappa^0$, $\kappa^1 
+		\kappa^0$, and $\texttt{bool}^0 
+		\to \texttt{int}^0$ 
+		where $\to$ is 
+		a type consructor), and 
+		a \textit{schematic type} is one 
+		with type variables (such as 
+		$\alpha \to \texttt{bool}^0$). 
+		Monomorphization involves 
+		repeatedly instantiating schematic
+		terms based on a set of 
+		monomorphic terms until a fixed 
+		point is reached.
+		
+		The definition of monomorphization 
+		requires a description of 
+		\textit{instantiation} of schematic 
+		entities w.r.t. 
+		monomorphic ones.
+		\begin{itemize}
+		\item Informally, a monomorphic type 
+			$\tau_M$ \textit{matches} a schematic 
+			type $\tau_S$ if it can replace the 
+			type variables in the schematic 
+			type. For example, \texttt{bool} 
+			matches $\alpha$; and $\texttt{bool} 
+			\to \texttt{int}$ matches 
+			$\texttt{bool} \to \beta$
+			since \texttt{int} matches 
+			$\beta$. Finally, for our running 
+			example taken from Bohme et al., 
+			${\texttt{bool} \to \kappa}$
+			matches $\alpha \to \beta$,
+			where $\kappa$ is a monomorphic
+			type. 
+			
+		\item Given a monomorphic constant 
+			$c^{\tau_M}$,  if $t^S$ is a 
+			schematic term that contains a 
+			schematic constant $c^{\tau_S}$ 
+			such that $\tau_M$ matches 
+			$\tau_S$, then $c^{\tau_M}$ induces 
+			a substitution $\sigma$ on $t^S$, 
+			and $\sigma(t^S)$ is an instance of 
+			$t^S$ w.r.t. to $c^{\tau_M}$. 
+			For example, the instance of term
+			\begin{center}
+				$(\forall f^{\alpha \to \beta},\ 
+				x^{\alpha},\ xs^{\texttt{list }
+				\alpha}.\ \texttt{apphd }f\ 
+				(\texttt{cons }x\ xs) = f\ x)$
+			\end{center} 
+			w.r.t. constant
+			\begin{center}
+				$(\lambda x^{\texttt{bool}}.
+				\texttt{if }x\texttt{ then }
+				a^{\kappa} \texttt{ else }
+				b^{\kappa})^{\texttt{bool} \to 
+				\kappa}$ 
+			\end{center}
+			is
+			\begin{center}
+				$(\forall f^{\texttt{bool} 
+				\to \kappa},\ x^{\alpha},\ 
+				xs^{\texttt{list }\alpha}. 
+				\texttt{ apphd }f\ (\texttt{cons }
+				x \ xs) = f\ x)$
+			\end{center}
+			where the instantiation 
+			has turned all occurrences of $f$ 
+			in the term from $f^{\alpha \to \beta}$ 
+			to $f^{\texttt{bool} \to \kappa}$.
+			The following presents some inline, 
+			technical preliminaries about 
+			the rest of the terms.
+			\texttt{list $\alpha$} is a compound,
+			polymorphic type of a list of 
+			$\alpha$'s where $\alpha$ is a type 
+			variable. \texttt{list bool} is the 
+			type of lists of Booleans. \texttt{cons} 
+			is the list constructor of type 
+			$\alpha \to \texttt{list }\alpha \to 
+			\texttt{list }\alpha$ and $[\ ]$ is 
+			the list constructor for empty lists. 
+			For example, the integer list 
+			containing $1$, $2$, and $3$ (in that 
+			order) is represented as 
+			$\texttt{cons }1\ (\texttt{cons }2
+			\ (\texttt{cons }3\ [\ ]))$.
+			\texttt{hd} is a $\texttt{list}\ 
+			\alpha \to \alpha$ function that 
+			returns the first element of a list 
+			and \texttt{apphd} is an $(\alpha
+			\to \beta) \to \texttt{list}\
+			\alpha \to \beta$ function that
+			takes a function $f$ and a list 
+			$l$ as input, and applies $f$
+			to the head of $l$ (or, $f\ 
+			(\texttt{hd }l)$).
+		\item The idea of an instance is 
+			extended to terms as follows. If 
+			$t^M$ is a monomorphic term, then 
+			$\sigma(t^S)$ is an instance of 
+			$t^S$ w.r.t. $t^M$, if 
+			$\sigma$, the combination of all 
+			substitutions induced by the 
+			constants in $t^M$ is defined. This 
+			instance might still be schematic. For 
+			example, since $x^{\texttt{bool}}$ is 
+			an instance of $x^{\alpha}$ w.r.t.
+			$\texttt{T}^{\texttt{bool}}$, 
+			and $xs^{\texttt{list bool}}$ is 
+			an instance of 
+			$xs^{\texttt{list }\alpha}$ 
+			w.r.t. $[\ ]^{\texttt{list bool}}$,
+			we can combine the instantiation 
+			of the constant in the previous 
+			example to obtain that the 
+			instantiation of term
+			\begin{center}
+				$(\forall f^{\alpha \to \beta},\ 
+				x^{\alpha},\ xs^{\texttt{list }
+				\alpha}.\ \texttt{apphd }f\ 
+				(\texttt{cons }x\ xs) = f\ x)$
+			\end{center}
+			w.r.t. the term
+			\begin{center}
+				$(\texttt{apphd }(\lambda 
+				x.\ \texttt{if }x\texttt{ then }
+				a \texttt{ else } b)^{\texttt{bool} 
+				\to \kappa}\ (\texttt{cons T}\ 
+				[\ ])) \neq a$
+			\end{center}
+			to be
+			\begin{center}
+				$(\forall f^{\texttt{bool}
+				\to \kappa},\ x^{\texttt{bool}},
+				\ xs^{\texttt{list bool}}.\ 
+				\texttt{apphd }f\ (\texttt{cons }x
+				\ xs) = f\ x)$
+			\end{center}
+		\item Instantiation can further be 
+			extended to sets of schematic 
+			terms $S$ and monomorphic terms $M$. 
+			An instance of $S$ w.r.t. 
+			$M$ is the set $I$ of terms such 
+			that each term in $I$ is an instance 
+			of some term from $S$ w.r.t. 
+			some term from $M$. Since 
+			instantiation can produce either 
+			monomorphic or schematic terms, $I$
+			can be partitioned into either as
+			$(I_M, I_S)$.
+		\end{itemize}
+		Now, we can describe monomorphization.
+		\begin{itemize}
+		\item A \textit{monomorphization 
+			step} for $S$ w.r.t. $M$ maps 
+			the pair $(M,S)$ to the pair 
+			$(M \cup I_M, S \cup I_S)$.
+		\item The complete 
+			\textit{monomorphization} of $S$ 
+			w.r.t. $M$ is the computation of 
+			a least fixed point of 
+			monomorphization steps of $S$ 
+			w.r.t. $M$.
+		\item Given a HOL formula $F$, 
+			if $(M, S)$ is the partition of its 
+			constituents into monomorphic and 
+			schematic terms, then 
+			monomorphization of $S$ 
+			w.r.t. $M$ yields pair 
+			$(M^{\prime}, S^{\prime})$ and we 
+			call the conjunction of all terms in 
+			$M^{\prime}$ the monomorphization 
+			of $F$.
+		\end{itemize}
+		Thus, using the above examples as 
+		instantiation steps, we have that 
+		monomorphization translates the formula $F$
+		\begin{align*}
+			F:\ &(\forall f^{\alpha \to \beta},\ 
+			x^{\alpha},\ xs^{\texttt{list }\alpha}.\ 
+			\texttt{apphd }f\ (\texttt{cons }x
+			\ xs) = f\ x)\ \land\ \\
+			&((\texttt{apphd }(\lambda x.\ 
+			\texttt{if }x \texttt{ then }a 
+			\texttt{ else } b)^{\texttt{bool} 
+			\to \kappa}\ (\texttt{cons T}\ [\ ])) 
+			\neq a)
+		\end{align*}
+		to the formula $F^{\prime}$
+		\begin{align*}
+			F^{\prime}:\ &(\forall 
+			f^{\texttt{bool} \to \kappa},\ 
+			x^{\texttt{bool}},\ 
+			xs^{\texttt{list bool}}.\ 
+			\texttt{apphd }f\ (\texttt{cons }x
+			\ xs) = f\ x) \ \land\ \\
+			&((\texttt{apphd } (\lambda x.\ 
+			\texttt{if }x \texttt{ then }a 
+			\texttt{ else } b)^{\texttt{bool} 
+			\to \kappa}\ (\texttt{cons T}\ 
+			[\ ])) \neq a).
+		\end{align*}
+		\noindent The following are some 
+		limitations of this process:
+		\begin{itemize}
+		\item There have to be monomorphized 
+			terms in a formula, to guide the 
+			monomorphization process, so it 
+			seems like this process would 
+			fail with formulas that contain 
+			only schematic terms. 
+		\item The monomorphization process 
+			could be non-terminating. In 
+			other words, the first component
+			of the pair yielded by 
+			monomorphization --- the 
+			set of monomorphic terms ---
+			could be infinite. For example,
+			consider $S = \{c^{\alpha}
+			\land c^{\kappa\ \alpha}\}$
+			and $M = \{c^{\kappa_0}\}$.
+			Now, $\kappa_0$ matches 
+			$\alpha$, so the instance
+			$c^{\kappa_0} \land 
+			c^{\kappa\ \kappa_0}$ is added 
+			to $M$ after a monomorphization 
+			step. Now, $\kappa\ \kappa_0$
+			matches $\alpha$, so the 
+			instance $c^{\kappa\ \kappa_0} 
+			\land c^{\kappa\ \kappa\ 
+			\kappa_0}$ is added to $M$, 
+			and so on. Since the proof of a 
+			formula, if it existed, would 
+			be finite, most monomorphic 
+			terms would be irrelevant. 
+			Finding the finite subset of 
+			necessary monomorphic terms is 
+			undecidable~\cite{10.1007/978-3-642-24364-6_7},
+			but Bohme et al. use heuristic
+			methods to overapproximate
+			this set. They limit the 
+			number of monomorphization 
+			steps and the number of 
+			monomorphic terms generated
+			with the expectation that 
+			monomorphic terms that 
+			contribute to proofs 
+			are typically generated early 
+			in the monomorphization process.
+		\item The monomorphization process
+			is described as a syntactic 
+			process. Semantic steps in 
+			the process aren't described, 
+			and if it doesn't indeed 
+			involve	any semantic pruning of 
+			translations, the number of 
+			monomorphization steps 
+			might be impractically large. 
+			For example, from the formula 
+			in the running example above ($F$), 
+			$x^{\alpha}$ could match 
+			$a^{\kappa}$ and be instantiated 
+			to $x^{\kappa}$. While 
+			syntactically, this would 
+			check out, semantically, 
+			given that $f^{\alpha \to \beta}$
+			is instantiated to 
+			$f^{\texttt{bool} \to \kappa}$, 
+			and that $f$ is applied to $x$, 
+			$x$ has to have type 
+			\texttt{bool} and this can be 
+			achieved by matching it with 
+			$x^{\texttt{bool}}$.
+		\item Monomorphization is 
+			incomplete and the instantiations 
+			are done heuristically. This 
+			means that if the SMT solver 
+			is not able to prove the 
+			monomorphized version of a 
+			formula, a different 
+			monomorphization could 
+			very well be provable. Thus, 
+			the monomorphization of a 
+			problem would have to be 
+			done smartly, and sometimes
+			repeated multiple times to 
+			be successful. 
+		\end{itemize} 
+	
+	\subsubsection{Lambda-Lifting}
+		$\lambda$-abstractions represent 
+		anonymous or unnamed functions, 
+		which aren't allowed in MSFOL.
+		These abstractions are removed
+		from HOL formulas by a process 
+		called \textit{$\lambda$-lifting}
+		which uses a fresh constant as a
+		name for the abstraction and adds 
+		a quantified formula specifying 
+		it's behavior. Concretely,
+		\begin{align*}
+			\llbracket t[\lambda x^{\tau}.u]
+			\rrbracket \cong 
+			(t[(\lambda x^{\tau}.u) \mapsto c]
+			\land (\forall x^{\tau}.\ c\ x = u))
+		\end{align*}
+		The notation $t[x]$ represents a 
+		term $t$ with a sub-term $x$, 
+		and $t[x \mapsto y]$ is the 
+		term obtained by substituting all 
+		occurrences of $x$ by $y$ in $t$.
+		$c$ is specified in MSFOL as an 
+		uninterpreted function with sort 
+		$\tau \to \kappa$ where $\kappa$ 
+		is the sort of $u$. For instance, 
+		$(\lambda x^{\texttt{int}}, x + 1)\ 
+		5 = 6$
+		is translated to $(c\ 5 = 6) \land
+		(\forall x^{\texttt{int}}.\ 
+		c\ x = x + 1)$. $\lambda-$lifting
+		faithfully preserves the 
+		semantics of the function, and 
+		thus it maintains soundness. 
+		Quantified formulas are usually a 
+		source of undecidability for SMT 
+		solvers, so these lifted formulas 
+		contribute to the incompleteness
+		of the translation.
+		%If the 
+		%$\lambda-$ abstraction contains free
+		%variables, then they are turned 
+		%into additional arguments to $c$.
+		
+	\subsubsection{Explicit Applications}
+		For functional constants 
+		occurring multiple times with 
+		a variable number 
+		of arguments, the minimal 
+		number of arguments are 
+		considered as the arity of the 
+		function, and any additional 
+		arguments are expressed 
+		explicitly, with the help of a 
+		constructor 
+		$\texttt{app}^{(\alpha_1 \to 
+		\alpha_2) \to \alpha_1 \to 
+		\alpha_2}$ that is defined as:
+		\begin{center}
+			$\texttt{app }t_1\ t_2 = 
+			t_1\ t_2$
+		\end{center}
+		If $c$ is a constant that 
+		occurs with at least $n$
+		arguments, then 
+		occurrences of applications 
+		of $c$ are translated as:
+		\begin{center}
+			$\llbracket c\ t_1\ ...\ t_n
+			\ u_1\ ...\ u_m \rrbracket
+			\cong \texttt{app}\ (...\ 
+			(\texttt{app }(c\ t_1\ 
+			...\ t_n)\ u_1)	\ ...)\ u_m$
+		\end{center}
+		where $m$ could be $0$, in which 
+		case there are no applications 
+		of \texttt{app}. For example, if 
+		$f^{\texttt{int} \to \texttt{int}}$ 
+		occurs twice in a formula, once 
+		partially applied to no arguments 
+		as $f$, and once fully applied as 
+		$(f\ 0)$, then since the minimal 
+		number of arguments to $f$ is 
+		zero, we have:
+		\begin{align*}
+		\llbracket f \rrbracket &\cong
+		f\\
+		\llbracket f\ 0 \rrbracket &\cong
+		\texttt{app } f\ 0
+		\end{align*}
+		
+		\texttt{app} is a higher-order 
+		function so both the function 
+		($f$ in the above example) and 
+		\texttt{app} have to be encoded 
+		in the SMT solver as constructors.
+		This can also be done using arrays 
+		which are essentially functional 
+		types which can be passed
+		around, since arrays in 
+		SMTLIB~\cite{BarFT-SMTLIB} (the 
+		standard for SMT solvers)
+		can have any index and value types, 
+		and map elements of the index type 
+		to the value type. Bohme et al. 
+		don't specify what technique 
+		they use to encode the 
+		\texttt{app} constructor.
+		
+		Using the \texttt{app} constructor
+		for partially applied interpreted 
+		constants in MSFOL, such as 
+		logical connectives, would result 
+		in terms that aren't well-typed.
+		These are $\eta-$expanded and 
+		then $\lambda-$lifted. For example, 
+		for the partially applied 
+		conjunction ($\land$, used as prefix 
+		here), a partial application is 
+		translated as follows.
+		\begin{align*}
+			\llbracket t [\land\ x] 
+			\rrbracket &\cong \llbracket 
+			 t[\lambda y.\ \land\ x\ y]
+			\rrbracket&(\eta-expansion)\\
+			&\cong t[c]  \land (\forall y.\ 
+			c\ y = \land\ x\ y) &(\lambda-lifting)
+		\end{align*}
+		
+	\subsubsection{Erasure of Compound Types}
+		A type constructor $\kappa^n$ with 
+		$n > 0$ is applied to $n$ types 
+		$\tau_i$. After monomorphization, 
+		each $\tau_i$ is monomorphic, so 
+		$\kappa^n\ \tau_1\ ...\ \tau_n$ 
+		is a monomorphic, compound type. It
+		is represented as a fresh nullary 
+		type constructor $\kappa_0^n$ with 
+		the same interpretation as 
+		$\kappa^n\ \tau_1\ ...\ \tau_n$, 
+		which can now be represented in 
+		MSFOL.
+		\begin{center}
+			$\llbracket \kappa^n\ 
+			\tau_1\ ...\ \tau_n \rrbracket
+			\cong \kappa_0^n$
+		\end{center}
+		Some examples are:
+		\begin{align*}
+			\llbracket \texttt{bool} \to
+			\kappa \rrbracket &\cong \kappa_1\\
+			\llbracket \texttt{list\ bool}
+			\rrbracket &\cong \kappa_2
+		\end{align*}
+		At the time of writing of Bohme et al.,
+		SMT solvers didn't support sorts 
+		parameterized by other sorts, but they 
+		support them now, and these can be 
+		used to encode compound types.
+		
+		While this is a straightforward
+		translation step syntactically, 
+		notice that SMT solvers need 
+		extra help via premise selection 
+		to solve constraints involving 
+		these types. Integers are 
+		axiomatized in the SMT solver as 
+		the theories of linear and 
+		non-linear integer arithmetic, and 
+		Isabelle/HOL integers are made to 
+		correspond to these in the translation, 
+		so when a formula containing 
+		integers is sent to the SMT solver, 
+		it can perform integer reasoning. 
+		However, SMT solvers have no 
+		axiomatization of, say, lists 
+		of Booleans. It is crucial that when 
+		\texttt{list bool} is 
+		translated to $\kappa_2$, the 
+		premise selector of sledgehammer
+		selects the right lemmas about 
+		Boolean lists to give to the 
+		SMT solver so it can reason 
+		about them. So in this step, 
+		completeness depends heavily on 
+		premise selection.
+		
+	\subsubsection{Interpreted and Uninterpreted Constants}
+		As mentioned in the previous section,
+		certain types in Isabelle/HOL correspond
+		to certian sorts in the SMTLIB standard.
+		Bohme et al. exploit the axiomatizations 
+		of these sorts by translating constants 
+		of these types from HOL to the 
+		corresponding MSFOL constants - these 
+		include linear arithmetic constants over 
+		integers and reals and bit-vector 
+		arithmetic. They even use the SMTLIB 
+		theory of algebraic 
+		datatypes~\cite{BarST-PDPAR-06} to 
+		encode inductive types from Isabelle/HOL
+		such as lists. This allows the SMT solver
+		to rely on the decision procedures for 
+		these theories and not just the premises
+		provided by Sledgehammer, to prove the 
+		conjecture. 
+		
+		The rest of the constants are 
+		translated as uninterpreted constants, 
+		and this is a source of 
+		incompleteness --- the SMT solver only 
+		knows as much about an uninterpreted 
+		constants as the additional constraints 
+		(premises) will tell it. If the premise 
+		selector of Sledgehammer doesn't capture 
+		the constraints needed to prove something
+		about an uninterpreted constant, the SMT 
+		solver will not be able to prove it.
+		Even with interpreted constants, if the 
+		constants belong to an undecidable theory,
+		the SMT solver will not necessarily be 
+		able to prove it.
+		
+\bibliographystyle{abbrv}
+\bibliography{bib2}
+
+\end{document}
