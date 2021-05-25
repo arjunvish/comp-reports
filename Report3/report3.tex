@@ -71,7 +71,7 @@
 	representation of SMT formulas in 
 	Coq. The checker is proven correct,
 	lifting up the formulas
-	to Coq formulas over Booleans via a
+	to Booleans goals in Coq via a
 	process called computational 
 	reflection (described in Report 2).
 	
@@ -560,7 +560,7 @@
 	(\neg b \lor c) \land (\neg c 
 	\lor \neg a)$. Since there 
 	are no further propagations, the 
-	decision $b \mapsto False$ can be made 
+	decision $b \mapsto \bot$ can be made 
 	to satisfy the second clause, and the 
 	entire formula. 
 	The theory-level rules
@@ -998,27 +998,27 @@
 	distinguished from ``first-order" types 
 	(types of terms that are not types), 
 	by referring to 
-	them as \textit{sorts}. At the bottom of the 
+	them as \textit{kinds}. At the bottom of the 
 	type hierarchy, Coq has (1) regular first-order
 	types such as \texttt{Bool} representing 
 	Booleans and \texttt{Nat} representing 
 	natural numbers, that are defined inductively
 	and are themselves instances of the 
-	\texttt{Set} sort, and (2) propositions or 
-	properties in Coq that have sort 
+	\texttt{Set} kind, and (2) propositions or 
+	properties in Coq that have kind
 	\texttt{Prop}. The rest of the 
 	hierarchy looks like this: 
 	\texttt{Prop} and 
-	\texttt{Set} have sort 
+	\texttt{Set} have kind
 	\texttt{Type$_1$} and 
-	\texttt{Type$_i$} has sort 
+	\texttt{Type$_i$} has kind 
 	\texttt{Type$_{i+1}$}. The implementation 
-	of propositions as a sort in Coq is its
+	of propositions as a kind in Coq is its
 	means of enforcing the Curry-Howard 
 	correspondence between proofs and 
 	terms (or programs), and between 
 	propositions and types. The \texttt{Prop} 
-	sort implements a constructive logic in 
+	kind implements a constructive logic in 
 	Coq. Constructive or intuitionistic logic 
 	is a branch of mathematical logic 
 	studying arguments concerning 
@@ -1029,7 +1029,7 @@
 	Thus, a \texttt{Prop} $P$ can be proved 
 	in Coq only if a proof term having 
 	type $P$ can be constructed. 	
-	This term is constructed within 
+	This term can be constructed within 
 	a \textit{proof script} in the Coq
 	user-interface. Given a lemma, Coq 
 	provides a \textit{goal} and 
@@ -1102,7 +1102,7 @@ Qed.
 	a proof in constructive logic.
 	The law of the excluded middle
 	itself is a convenient example.
-	\texttt{forall (a : Prop), a $\lor$ ~a}
+	\texttt{forall (a : Prop), a $\lor$ $\sim$a}
 	is not provable in Coq, because,
 	as mentioned before, the only way to 
 	prove a propositional disjunction 
@@ -1163,7 +1163,7 @@ Qed.
 	used as a Coq goal. We 
 	call such goals that 
 	embed a Boolean term into a 
-	proposition, \textit{Boolean
+	proposition \textit{Boolean
 	goals}.
 	\begin{example}
 		\em The law of 
@@ -1413,8 +1413,9 @@ Qed.
 			predicates to their Boolean counterparts.
 			If \texttt{prop2bool}, fails, so does
 			\texttt{smt}. If it succeeds, the goal 
-			is now (assuming symbol $P_i$ corresponds
-			to Boolean $B_i$):
+			is now (assuming predicate symbol $P_i$ 
+			corresponds to Boolean predicate symbol 
+			$B_i$):
 			\begin{center}
 				$\texttt{Goal}: P(B_1,\ \ldots,\ B_n)
 				= \texttt{true}$
@@ -1445,7 +1446,7 @@ Qed.
 			term \texttt{B} from the goal and creates a deep 
 			embedding \texttt{f} of \texttt{B}.
 			\begin{center}
-				\texttt{B}: $\texttt{B}_1 \ldots \texttt{B}_n$
+				\texttt{B}: $P(B_1,\ \ldots,\ B_n)$
 			\end{center}
 		\end{framed}
 		\vspace{-0.3in}
@@ -1496,13 +1497,11 @@ Qed.
 		\vspace{-0.3in}
 		\begin{framed}
 			\textsc{Step 6}: Proof of \texttt{F} is 
-			completed in Coq:
-			\begin{minted}{Coq}
-Theorem F : P
-Proof.
-  smt.
-Qed.
-			\end{minted}
+			completed in Coq:\\
+\texttt{Theorem F : $P$.}\\
+\texttt{Proof.}\\
+\texttt{smt.}\\
+\texttt{Qed.}
 		\end{framed}
 		\caption{SMTCoq's journey in proving 
 			example Boolean formula \texttt{F}}
@@ -1510,7 +1509,7 @@ Qed.
 	\end{figure}
 
 	SMTCoq is 
-	able to prove some
+	able to prove formulas over some
 	\texttt{Prop} predicates if they 
 	are reducible to their
 	corresponding 
@@ -1522,7 +1521,7 @@ Qed.
 	tactic that converts a 
 	\texttt{Prop} predicate symbol
 	to its corresponding \texttt{bool}
-	counterparts, by applying the 
+	counterpart, by applying the 
 	equivalence lemma, if one is available. 
 	The \texttt{prop2bool}
 	tactic only succeeds on a goal if 
@@ -1600,7 +1599,7 @@ Theorem bv_ult_B2P : forall n (a b : bitvector n),
   bv_ult a b = true <-> bv_ultP a b.
 \end{minted}
 		
-		An example of an equivalence 
+		\noindent An example of an equivalence 
 		proved in a Coq library is
 		that of the integer less than 
 		predicate.
