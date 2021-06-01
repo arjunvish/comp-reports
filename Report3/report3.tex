@@ -346,7 +346,8 @@
 	unsatisfiability, the algorithm 
 	backtracks and checks whether the 
 	formula is still unsatisfiable 
-	when the guess is flipped.
+	when the guess is undone (and 
+	prevented from being repeated).
 	
 	We now formalize the DPLL(T) algorithm 
 	as a state transition systems that 
@@ -363,12 +364,18 @@
 	guessed. For some variable $x$, 
 	the assignment $x \mapsto \top$ is added 
 	to the context by appending $x$ to 
-	$M$ and $x \mapsto \bot$ is added by 
-	appending $\neg x$. $F$ is a set of 
-	clauses representing the input formula 
-	in CNF. $C$ represents the conflict 
-	clause, the clause from $F$ that is 
-	falsified by the current assignment ---
+	$M$, and its complement is added 
+	by appending $\neg x$. $F$ is a set of 
+	clauses that is equisatisfiable with 
+	the input formula. The initial formula
+	$F_0$ may be transformed by the algorithm
+	but the transformation is always 
+	equisatisfiable with the initial input.
+	$C$ represents the conflict 
+	clause, a clause from $F$ that is 
+	falsified by the current assignment 
+	(or an equisatisfiable transformation 
+	of a clause from $F$) ---
 	it is either a singleton set with 
 	the conflict clause, or the empty 
 	set representing no conflict. 
@@ -388,17 +395,17 @@
 	set of literals occurring in $F$.
 	
 	The initial state of the system is 
-	$\langle (), F, \emptyset \rangle$. 
+	$\langle (), F_0, \emptyset \rangle$. 
 	The final state is one of:
 	\begin{itemize}
-		\item $fail$, when $F$ is 
+		\item $fail$, when $F_0$ is 
 		unsatisfiable.
-		\item $\langle M, F_0, \emptyset \rangle$ 
-		where $F$ is satisfiable, $F_0$ is 
-		a transformation of $F$ by the 
-		algorithm that maintains its 
-		(un)satisfiability,	and $M 
-		\models F_0$.
+		\item $\langle M, F, \emptyset \rangle$ 
+		where $F_0$ is satisfiable, $F$ is 
+		a transformation of $F_0$ by the 
+		algorithm that is equisatisfiable
+		with $F$, and $M 
+		\models F$.
 	\end{itemize}
 	
 	The transition system goes from the 
@@ -519,10 +526,14 @@
 	can be concluded via the $\mathit{Fail}$ rule. 
 	If, there are previous decisions at
 	the time of conflict, then the backjump
-	rule ($\mathit{Backj}$) picks a decision that is 
-	most likely the one that resulted in 
-	the conflict, rewinds the state to 
-	that decision and flips the decision. 
+	rule ($\mathit{Backj}$) uses the 
+	conflict clause to undo one or more 
+	decisions and add a propagated literal
+	to the context. As a special case 
+	of this, the newly propagated 
+	literal is the complement of a 
+	previously assigned (and undone)
+	decision.
 	To do this, it might need the explain 
 	rule ($\mathit{Expl}$) to modify the 
 	conflict clause using resolution. 
@@ -543,7 +554,7 @@
 	so that the algorithm is able to 
 	backtrack further than chronological
 	backtracking (where the most 
-	recent decision is flipped), to 
+	recent decision is undone), to 
 	reach the source of the conflict.
 	In our example, since there is only 
 	one decision so far, the algorithm
@@ -902,12 +913,12 @@
 	from this. A negation of a clause
 	is a conjunction of each of the 
 	clause's disjuncts, 
-	separately negated. The proof 
-	consists of a box, from which the 
-	lemma is concluded. Within the box
-	is a proof tree with these negated 
-	disjuncts at the leaves, and $\bot$
-	at the root. 
+	separately negated. The premise 
+	of the $\mathit{Lemma}$ rule 
+	is a subproof of $\bot$ from 
+	the complements of the disjuncts 
+	of the theory lemma, and from this it 
+	concludes the lemma. 
 	
 	\begin{example}
 		\em The only theory lemma
@@ -937,7 +948,7 @@
 		$\bot$ at the root of a tree that contains the 
 		conjuncts of $\neg L$ as leaves --- $C, D, E, 
 		\neg B$. It applies the $\mathit{Lemma}$ to 
-		this box to derive $L$. The application 
+		this subproof to derive $L$. The application 
 		of the $\mathit{Lemma}$ rule is the 
 		unlabeled rule application from 
 		$\mathcal{P}$ to $L$ in Figure~\ref{fig:propproof},
@@ -987,7 +998,7 @@
 	Coq is a proof assistant based on the 
 	Calculus of Inductive Constructions 
 	(CIC)~\cite{paulinmohring:hal-01094195},
-	which is as an extension of the dependent 
+	which is an extension of the dependent 
 	type theory --- the Calculus of Constructions 
 	(CoC)~\cite{10.1016/0890-5401(88)90005-3} 
 	--- with inductive types. Coq's type 
@@ -1017,13 +1028,9 @@
 	means of enforcing the Curry-Howard 
 	correspondence between proofs and 
 	terms (or programs), and between 
-	propositions and types. The \texttt{Prop} 
-	kind implements a constructive logic in 
-	Coq. Constructive or intuitionistic logic 
-	is a branch of mathematical logic 
-	studying arguments concerning 
-	constructive objects. A proposition 
-	is provable in constructive logic, if 
+	propositions and types. As a consequence,
+	propositions having the \texttt{Prop} 
+	kind in Coq, are only provable, if 
 	a (proof) term inhabiting the 
 	proposition can be constructed.
 	Thus, a \texttt{Prop} $P$ can be proved 
@@ -1043,7 +1050,13 @@
 	it down and move over its 
 	constituents into the context
 	using Coq functions called 
-	\textit{tactics}.
+	\textit{tactics}. Coq implements a 
+	constructive logic via its 
+	\texttt{Prop} type. Constructive 
+	or intuitionistic logic 
+	is a branch of mathematical logic 
+	studying arguments concerning 
+	constructive objects.
 	
 	\begin{example}
 		\em The following Coq
@@ -1204,7 +1217,7 @@ Qed.
 		\texttt{true = true} using the 
 		tactic \texttt{simpl} and then 
 		by the reflexivity of 
-		\texttt{true}, both equalities
+		\texttt{=}, both equalities
 		are provable. Notice that, 
 		neither a proof of $a$, nor 
 		a proof of $\neg a$ was 

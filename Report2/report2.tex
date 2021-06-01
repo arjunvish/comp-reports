@@ -701,7 +701,17 @@ Qed.
 	(unsatisfiable), or 
 	\texttt{unknown} (`don't know').
 	Additionally, SMTCoq only works for 
-	quantifier-free SMT theories. The 
+	\textit{universal goals} of the form:
+	\begin{center}
+		\texttt{forall $Q$, \texttt{B} = true}.
+	\end{center}
+	where $Q$ is a vector of universally
+	quantified variables, and \texttt{B} is
+	a Boolean term,
+	and these goals, when negated and sent 
+	to the SMT solvers are quantifier-free. 
+	It cannot yet reason about goals that 
+	contain quantifiers when translated. The 
 	theories it currently supports 
 	are the theories of equality over
 	uninterpreted functions (EUF), 
@@ -713,7 +723,7 @@ Qed.
 	\label{sec:checker}
 	SMTCoq's checker checks the deep embedding
 	of SMT formulas in Coq against the 
-	proof trees discharged by the SMT solver.
+	proof trees constructed by the SMT solver.
 	Recall that a deep embedding is an
 	inductive type written in 
 	Coq representing SMT formulas. 
@@ -880,7 +890,7 @@ Inductive op : Type :=
 	declarative	rules with computational 
 	components called side conditions, and 
 	veriT uses a proof language similar to 
-	SMTLIB~\cite{Besson1}. SMTCoq has its 
+	SMT-LIB~\cite{Besson1}. SMTCoq has its 
 	own proof certificate format for SMT 
 	solver proofs and it translates proofs 
 	from all solvers to this certificate 
@@ -1270,7 +1280,7 @@ Inductive op : Type :=
 		\texttt{refl\_equal} tactic forces 
 		Coq to convert 
 		\texttt{checker f t = true} to 
-		\texttt{true}. If the call to the 
+		\texttt{true = true}. If the call to the 
 		checker is convertible, that is,
 		the checker is successful, then 
 		the reflection lemma produces 
@@ -1328,8 +1338,7 @@ Inductive op : Type :=
 	certificate format for SMT
 	proofs also makes it 
 	convenient to integrate a 
-	new SMT solver with SMTCoq, 
-	no matter what its proof format
+	new SMT solver with SMTCoq
 	--- one need only write a translator
 	from the proof format of the SMT
 	solver to the certificate format. 
@@ -1414,8 +1423,9 @@ Inductive op : Type :=
 	input) is then reconstructed in 
 	Isabelle/HOL via a bottom-up 
 	traversal of the tree, where 
-	for each node, a theorem is 
-	added to Isabelle/HOL by Metis.
+	for each node, Metis attempts 
+	to prove a corresponding theorem
+	in Isabelle/HOL.
 	Unlike SMTCoq, this reconstruction
 	process occurs external to 
 	Isabelle/HOL's logic ---
@@ -1460,7 +1470,7 @@ Inductive op : Type :=
 	respectively.
 	The translation is sound --- 
 	given a formula 
-	$F = \Gamma \land \phi$ in HOL, if 
+	$F = \Gamma \to \phi$ in HOL, if 
 	$\llbracket F \rrbracket$ is refutable 
 	($\llbracket \Gamma \land \neg
 	\phi \rrbracket$
@@ -1596,7 +1606,7 @@ Inductive op : Type :=
 	\kappa^0$, and $\texttt{Bool}^0 
 	\to \texttt{int}^0$ 
 	where $\to$ is 
-	a type consructor), and 
+	a type constructor), and 
 	a \textit{schematic type} is one 
 	with type variables (such as 
 	$\alpha \to \texttt{Bool}^0$). 
@@ -1934,7 +1944,7 @@ Inductive op : Type :=
 	of the constant, and any additional 
 	arguments are expressed 
 	explicitly, with the help of a 
-	constructor 
+	function symbol 
 	$\texttt{app}^{(\alpha_1 \to 
 		\alpha_2) \to \alpha_1 \to 
 		\alpha_2}$ that is defined as:
@@ -1972,7 +1982,7 @@ Inductive op : Type :=
 	\end{align*}
 	
 	\texttt{app} is a higher-order 
-	function so both the function 
+	function symbol so both the function 
 	($f$ in the above example) and 
 	\texttt{app} have to be encoded 
 	in the SMT solver as constructors.
@@ -1980,22 +1990,26 @@ Inductive op : Type :=
 	which are essentially functional 
 	types which can be passed
 	around, since arrays in 
-	SMTLIB~\cite{BarFT-SMTLIB} (the 
+	SMT-LIB~\cite{BarFT-SMTLIB} (the 
 	standard for SMT solvers)
 	can have any index and value types, 
 	and map elements of the index type 
 	to the value type. Bohme et al. 
 	don't specify what technique 
 	they use to encode the 
-	\texttt{app} constructor.
+	\texttt{app} symbol, but it is 
+	reasonable to guess that they do
+	it using SMT-LIB arrays.
 	
-	Using the \texttt{app} constructor
+	Using the \texttt{app} symbol
 	for partially applied interpreted 
 	constants in MSFOL, such as 
 	logical connectives, would result 
 	in terms that aren't well-typed.
 	Instead, these are $\eta-$expanded 
-	and then $\lambda-$lifted. For example, 
+	and then $\lambda-$lifted, after 
+	converting the partially applied 
+	term to a fresh constant. For example, 
 	for the partially applied 
 	conjunction ($\land$, used in prefix 
 	notation here), a partial application is 
@@ -2008,6 +2022,8 @@ Inductive op : Type :=
 	&\cong t[c]  \land (\forall y.\ 
 	c\ y = \land\ x\ y) &(\lambda-lifting)
 	\end{align*}
+	where $c$ is the fresh constant for 
+	$\land\ x$ in the translated term.
 	
 	\subsubsection{Erasure of Compound Types}
 	A type constructor $\kappa^n$ with 
@@ -2037,10 +2053,10 @@ Inductive op : Type :=
 	At the time of writing of Bohme et al.
 	(2012),	SMT solvers didn't support sorts 
 	parameterized by other sorts, but as of
-	SMTLIB version 2.5~\cite{BarFT-RR-15}
+	SMT-LIB version 2.5~\cite{BarFT-RR-15}
 	(2015), 
 	a parametric sort exists in 
-	SMTLIB-compliant solvers, 
+	SMT-LIB-compliant solvers, 
 	and these could alternatively be 
 	used to encode compound types.
 	
@@ -2074,18 +2090,14 @@ Inductive op : Type :=
 	\subsubsection{Interpreted and Uninterpreted Constants}
 	As mentioned in the previous section,
 	certain types in Isabelle/HOL correspond
-	to certian sorts in the SMTLIB standard.
+	to certian sorts in the SMT-LIB standard.
 	Bohme et al. exploit the axiomatizations 
 	of these sorts by translating constants 
 	and functions of these types from HOL to 
 	their corresponding MSFOL equivalents - these 
 	include linear arithmetic functions over 
 	integers and reals and bit-vector 
-	functions. They even use the SMTLIB 
-	theory of algebraic 
-	datatypes~\cite{BarST-PDPAR-06} to 
-	encode inductive types from Isabelle/HOL
-	such as lists. This allows the SMT solver
+	functions. This allows the SMT solver
 	to rely on the decision procedures for 
 	these theories and not just the premises
 	provided by Sledgehammer, to prove the 
@@ -2139,13 +2151,12 @@ Inductive op : Type :=
 	\begin{enumerate}
 		\item Trust the SMT solver as an oracle, 
 		and declare the conjecture to be proved in 
-		Isabelle/HOL. This is unideal since 
+		Isabelle/HOL. This is not ideal since 
 		it extends the trust-base of Isabelle/HOL.
 		\item Use the SMT solver as a relevance 
 		filter by asking the SMT solver for 
-		an unsat-core --- the set of premises 
-		in $\Gamma$ that lead directly to 
-		the unsatisfiability of the formula. 
+		an unsat-core --- a subset of 
+		$\Gamma$ that by itself entails $\phi$.
 		This would help Metis use a smaller
 		set of premises when it proves the 
 		conjecture in Isabelle/HOL.
@@ -2157,8 +2168,8 @@ Inductive op : Type :=
 	Bohme et al. use the third integration 
 	with proofs from the Z3 SMT solver, 
 	where for every inference node in the 
-	proof tree from Z3, Metis proves a 
-	theorem in Isabelle/HOL.
+	proof tree from Z3, Metis tries to prove 
+	a theorem in Isabelle/HOL.
 	
 	\bibliographystyle{abbrv}
 	\bibliography{bib2}
